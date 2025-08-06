@@ -93,6 +93,7 @@ export function Navigation() {
             </Text>
             {user?.isAdmin && (
               <Text style={styles.adminBadge}>Admin</Text>
+            )}
           <Image source={require('../../../assets/vite.svg')} style={styles.logo} />
           </View>
         </View>
@@ -174,6 +175,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12, // ml-3 (for text, but here for avatar)
+  },
+  userAvatarText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#2563eb',
   },
   userTextContainer: {
     flex: 1,
