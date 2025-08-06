@@ -1,40 +1,69 @@
 import React from 'react';
+import { View, StyleSheet } from 'react-native';
 
-interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+interface CardProps {
   children: React.ReactNode;
-  className?: string;
+  className?: string; // Keep for compatibility but won't be used
+  style?: any;
 }
 
-export function Card({ children, className = '', ...props }: CardProps) {
+export function Card({ children, style, ...props }: CardProps) {
   return (
-    <div className={`bg-background-alt shadow rounded-lg border border-border hover:shadow-md transition-shadow duration-200 ${className}`} {...props}>
+    <View style={[styles.container, style]} {...props}>
       {children}
-    </div>
+    </View>
   );
 }
 
-interface CardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
+interface CardHeaderProps {
   children: React.ReactNode;
-  className?: string;
+  className?: string; // Keep for compatibility but won't be used
+  style?: any;
 }
 
-export function CardHeader({ children, className = '', ...props }: CardHeaderProps) {
+export function CardHeader({ children, style, ...props }: CardHeaderProps) {
   return (
-    <div className={`px-4 py-5 sm:px-6 border-b border-border ${className}`} {...props}>
+    <View style={[styles.headerContainer, style]} {...props}>
       {children}
-    </div>
+    </View>
   );
 }
 
-interface CardBodyProps extends React.HTMLAttributes<HTMLDivElement> {
+interface CardBodyProps {
   children: React.ReactNode;
-  className?: string;
+  className?: string; // Keep for compatibility but won't be used
+  style?: any;
 }
 
-export function CardBody({ children, className = '', ...props }: CardBodyProps) {
+export function CardBody({ children, style, ...props }: CardBodyProps) {
   return (
-    <div className={`px-4 py-5 sm:p-6 ${className}`} {...props}>
+    <View style={[styles.bodyContainer, style]} {...props}>
       {children}
-    </div>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: '#ffffff', // var(--color-background-alt)
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb', // var(--color-border)
+    // Shadow for iOS
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    // Elevation for Android
+    elevation: 2,
+  },
+  headerContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb', // var(--color-border)
+  },
+  bodyContainer: {
+    padding: 20,
+  },
+});

@@ -1,5 +1,6 @@
 import React from 'react';
-import { X, AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 
 interface AlertProps {
   type: 'success' | 'error' | 'info' | 'warning' | 'conflict' | 'authorization' | 'network';
@@ -10,73 +11,170 @@ interface AlertProps {
 
 const alertConfig = {
   success: {
-    bg: 'bg-green-50',
-    border: 'border-green-200',
-    text: 'text-green-800',
-    icon: <CheckCircle className="h-5 w-5 text-green-400" />,
+    containerStyle: styles.successContainer,
+    textStyle: styles.successText,
+    iconName: 'check-circle' as const,
+    iconLibrary: 'MaterialIcons' as const,
+    iconColor: '#10b981',
   },
   error: {
-    bg: 'bg-red-50',
-    border: 'border-red-200',
-    text: 'text-red-800',
-    icon: <AlertCircle className="h-5 w-5 text-red-400" />,
+    containerStyle: styles.errorContainer,
+    textStyle: styles.errorText,
+    iconName: 'error' as const,
+    iconLibrary: 'MaterialIcons' as const,
+    iconColor: '#ef4444',
   },
   info: {
-    bg: 'bg-blue-50',
-    border: 'border-blue-200',
-    text: 'text-blue-800',
-    icon: <AlertCircle className="h-5 w-5 text-blue-400" />,
+    containerStyle: styles.infoContainer,
+    textStyle: styles.infoText,
+    iconName: 'info' as const,
+    iconLibrary: 'MaterialIcons' as const,
+    iconColor: '#3b82f6',
   },
   warning: {
-    bg: 'bg-yellow-50',
-    border: 'border-yellow-200',
-    text: 'text-yellow-800',
-    icon: <AlertTriangle className="h-5 w-5 text-yellow-400" />,
+    containerStyle: styles.warningContainer,
+    textStyle: styles.warningText,
+    iconName: 'warning' as const,
+    iconLibrary: 'MaterialIcons' as const,
+    iconColor: '#f59e0b',
   },
   conflict: {
-    bg: 'bg-orange-50',
-    border: 'border-orange-200',
-    text: 'text-orange-800',
-    icon: <AlertTriangle className="h-5 w-5 text-orange-400" />,
+    containerStyle: styles.conflictContainer,
+    textStyle: styles.conflictText,
+    iconName: 'warning' as const,
+    iconLibrary: 'MaterialIcons' as const,
+    iconColor: '#ea580c',
   },
   authorization: {
-    bg: 'bg-purple-50',
-    border: 'border-purple-200',
-    text: 'text-purple-800',
-    icon: <AlertTriangle className="h-5 w-5 text-purple-400" />,
+    containerStyle: styles.authorizationContainer,
+    textStyle: styles.authorizationText,
+    iconName: 'warning' as const,
+    iconLibrary: 'MaterialIcons' as const,
+    iconColor: '#8b5cf6',
   },
   network: {
-    bg: 'bg-blue-50',
-    border: 'border-blue-200',
-    text: 'text-blue-800',
-    icon: <AlertTriangle className="h-5 w-5 text-blue-400" />,
+    containerStyle: styles.networkContainer,
+    textStyle: styles.networkText,
+    iconName: 'warning' as const,
+    iconLibrary: 'MaterialIcons' as const,
+    iconColor: '#3b82f6',
   },
 };
 
 export function Alert({ type, message, onDismiss, children }: AlertProps) {
   const config = alertConfig[type];
 
+  const renderIcon = () => {
+    if (config.iconLibrary === 'MaterialIcons') {
+      return <MaterialIcons name={config.iconName} size={20} color={config.iconColor} />;
+    } else {
+      return <Ionicons name={config.iconName as any} size={20} color={config.iconColor} />;
+    }
+  };
+
   return (
-    <div className={`rounded-md border p-4 transition-all duration-300 ${config.bg} ${config.border}`}>
-      <div className="flex items-center justify-between">
-        <div className="flex">
-          <div className="flex-shrink-0">
-            {config.icon}
-          </div>
-          <div className="ml-3">
-            <p className={`text-sm font-medium ${config.text}`}>{message}</p>
+    <View style={[styles.container, config.containerStyle]}>
+      <View style={styles.content}>
+        <View style={styles.iconAndMessage}>
+          <View style={styles.iconContainer}>
+            {renderIcon()}
+          </View>
+          <View style={styles.messageContainer}>
+            <Text style={[styles.messageText, config.textStyle]}>{message}</Text>
             {children}
-          </div>
-        </div>
+          </View>
+        </View>
         {onDismiss && (
-          <button
-            onClick={onDismiss}
-            className={`transition-colors duration-200 hover:opacity-75 ${config.text}`}
+          <TouchableOpacity
+            onPress={onDismiss}
+            style={styles.dismissButton}
+            activeOpacity={0.7}
           >
-            <X className="h-4 w-4" />
-          </button>
+            <MaterialIcons name="close" size={16} color={config.iconColor} />
+          </TouchableOpacity>
         )}
-      </div>
-    </div>
+      </View>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    borderRadius: 6,
+    borderWidth: 1,
+    padding: 16,
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  iconAndMessage: {
+    flexDirection: 'row',
+    flex: 1,
+  },
+  iconContainer: {
+    marginRight: 12,
+  },
+  messageContainer: {
+    flex: 1,
+  },
+  messageText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  dismissButton: {
+    padding: 4,
+    marginLeft: 12,
+  },
+  // Type-specific styles
+  successContainer: {
+    backgroundColor: '#f0fdf4',
+    borderColor: '#bbf7d0',
+  },
+  successText: {
+    color: '#166534',
+  },
+  errorContainer: {
+    backgroundColor: '#fef2f2',
+    borderColor: '#fecaca',
+  },
+  errorText: {
+    color: '#991b1b',
+  },
+  infoContainer: {
+    backgroundColor: '#eff6ff',
+    borderColor: '#bfdbfe',
+  },
+  infoText: {
+    color: '#1e40af',
+  },
+  warningContainer: {
+    backgroundColor: '#fffbeb',
+    borderColor: '#fde68a',
+  },
+  warningText: {
+    color: '#92400e',
+  },
+  conflictContainer: {
+    backgroundColor: '#fff7ed',
+    borderColor: '#fed7aa',
+  },
+  conflictText: {
+    color: '#9a3412',
+  },
+  authorizationContainer: {
+    backgroundColor: '#faf5ff',
+    borderColor: '#e9d5ff',
+  },
+  authorizationText: {
+    color: '#7c3aed',
+  },
+  networkContainer: {
+    backgroundColor: '#eff6ff',
+    borderColor: '#bfdbfe',
+  },
+  networkText: {
+    color: '#1e40af',
+  },
+});

@@ -1,29 +1,54 @@
 import React from 'react';
-import { Loader2 } from 'lucide-react';
+import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 
 interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg';
-  className?: string;
+  className?: string; // Keep for compatibility but won't be used
   text?: string;
+  color?: string;
 }
 
-const sizeClasses = {
-  sm: 'h-4 w-4',
-  md: 'h-6 w-6',
-  lg: 'h-8 w-8',
+const sizeMap = {
+  sm: 'small' as const,
+  md: 'large' as const,
+  lg: 'large' as const,
 };
 
-export function LoadingSpinner({ size = 'md', className = '', text }: LoadingSpinnerProps) {
+export function LoadingSpinner({ 
+  size = 'md', 
+  text, 
+  color = '#2563eb',
+  ...props 
+}: LoadingSpinnerProps) {
   if (text) {
     return (
-      <div className={`flex items-center space-x-2 ${className}`}>
-        <Loader2 className={`animate-spin ${sizeClasses[size]}`} />
-        <span className="text-sm text-gray-600">{text}</span>
-      </div>
+      <View style={styles.containerWithText}>
+        <ActivityIndicator 
+          size={sizeMap[size]} 
+          color={color}
+        />
+        <Text style={styles.text}>{text}</Text>
+      </View>
     );
   }
   
   return (
-    <Loader2 className={`animate-spin ${sizeClasses[size]} ${className}`} />
+    <ActivityIndicator 
+      size={sizeMap[size]} 
+      color={color}
+      {...props}
+    />
   );
 }
+
+const styles = StyleSheet.create({
+  containerWithText: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  text: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#6b7280', // text-gray-600
+  },
+});
