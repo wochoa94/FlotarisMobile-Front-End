@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Save, X, AlertCircle, CheckCircle } from 'lucide-react';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '../../../hooks/useAuth';
 import { useFleetData } from '../../../hooks/useFleetData';
 import { maintenanceOrderService } from '../../../services/apiService';
 import { formatUtcDateForInput, getTodayString } from '../../../utils/dateUtils';
 import { LoadingSpinner } from '../../../components/ui/LoadingSpinner';
+import { Button } from '../../../components/ui/Button';
+import { Label } from '../../../components/ui/Label';
+import { Input } from '../../../components/ui/Input';
 import { Alert } from '../../../components/ui/Alert';
 
 interface EditMaintenanceOrderFormData {
@@ -22,8 +26,9 @@ interface EditMaintenanceOrderFormData {
 }
 
 export function EditMaintenanceOrderPage() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const route = useRoute();
+  const navigation = useNavigation();
+  const { id } = route.params as { id: string };
   const { user } = useAuth();
   const { data, loading, error, refreshData } = useFleetData();
   
@@ -77,21 +82,11 @@ export function EditMaintenanceOrderPage() {
     }
   }, [successMessage, errorMessage]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
-    
-    if (type === 'checkbox') {
-      const checked = (e.target as HTMLInputElement).checked;
-      setFormData(prev => ({
-        ...prev,
-        [name]: checked,
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
+  const handleInputChange = (name: string, value: string | boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const validateForm = (): string | null => {
@@ -116,9 +111,7 @@ export function EditMaintenanceOrderPage() {
     return null;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleSubmit = async () => {
     if (!order) return;
     
     // Clear previous messages
@@ -160,7 +153,7 @@ export function EditMaintenanceOrderPage() {
       
       // Redirect to order detail page after a short delay
       setTimeout(() => {
-        navigate(`/maintenance-orders/${order.id}`);
+        navigation.navigate('MaintenanceOrderDetail', { id: order.id });
       }, 1500);
 
     } catch (error) {
@@ -185,37 +178,37 @@ export function EditMaintenanceOrderPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <View style={styles.centerContainer}>
         <LoadingSpinner size="lg" />
-      </div>
+      </View>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-12">
-        <div className="text-red-600 mb-4">{error}</div>
-        <button 
-          onClick={() => window.location.reload()} 
-          className="text-blue-600 hover:text-blue-700"
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <Button 
+          onPress={() => navigation.goBack()}
+          variant="primary"
         >
           Try again
-        </button>
-      </div>
+        </Button>
+      </View>
     );
   }
 
   if (!order) {
     return (
-      <div className="text-center py-12">
-        <div className="text-gray-500 mb-4">Maintenance order not found</div>
-        <button 
-          onClick={() => navigate('/maintenance-orders')} 
-          className="text-blue-600 hover:text-blue-700"
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorText}>Maintenance order not found</Text>
+        <Button 
+          onPress={() => navigation.navigate('MaintenanceOrders')}
+          variant="primary"
         >
           Back to maintenance orders
-        </button>
-      </div>
+        </Button>
+      </View>
     );
   }
 
@@ -225,318 +218,432 @@ export function EditMaintenanceOrderPage() {
   );
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Link
-            to={`/maintenance-orders/${order.id}`}
-            className="inline-flex items-center text-gray-500 hover:text-gray-700 transition-colors duration-200"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back to Order Details
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Edit Maintenance Order</h1>
-            <p className="text-sm text-gray-600">
-              Order #{order.orderNumber}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Success Message */}
-      {successMessage && (
-        <div className="rounded-md bg-green-50 border border-green-200 p-4 transition-all duration-300">
-          <div className="flex items-center justify-between">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <CheckCircle className="h-5 w-5 text-green-400" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-green-800">{successMessage}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => dismissMessage('success')}
-              className="text-green-400 hover:text-green-600 transition-colors duration-200"
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('MaintenanceOrderDetail', { id: order.id })}
+              style={styles.backButton}
+              activeOpacity={0.7}
             >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      )}
+              <View style={styles.backButtonContent}>
+                <MaterialIcons name="arrow-back" size={16} color="#6b7280" />
+                <Text style={styles.backButtonText}>Back to Order Details</Text>
+              </View>
+            </TouchableOpacity>
+            <View style={styles.headerInfo}>
+              <Text style={styles.headerTitle}>Edit Maintenance Order</Text>
+              <Text style={styles.headerSubtitle}>
+                Order #{order.orderNumber}
+              </Text>
+            </View>
+          </View>
+        </View>
 
-      {/* Error Message */}
-      {errorMessage && (
-        <div className="rounded-md bg-red-50 border border-red-200 p-4 transition-all duration-300">
-          <div className="flex items-center justify-between">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <AlertCircle className="h-5 w-5 text-red-400" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-red-800">{errorMessage}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => dismissMessage('error')}
-              className="text-red-400 hover:text-red-600 transition-colors duration-200"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      )}
+        {/* Success Message */}
+        {successMessage && (
+          <Alert
+            type="success"
+            message={successMessage}
+            onDismiss={() => dismissMessage('success')}
+          />
+        )}
 
-      {/* Current Order Info */}
-      <div className="bg-gray-50 rounded-lg p-4">
-        <h3 className="text-sm font-medium text-gray-700 mb-2">Current Order Information</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-          <div>
-            <span className="text-gray-500">Status:</span>
-            <span className="ml-2 font-medium capitalize">{order.status.replace('_', ' ')}</span>
-          </div>
-          <div>
-            <span className="text-gray-500">Vehicle:</span>
-            <span className="ml-2 font-medium">{vehicle?.name || 'Unknown Vehicle'}</span>
-          </div>
-          <div>
-            <span className="text-gray-500">Created:</span>
-            <span className="ml-2 font-medium">{new Date(order.createdAt).toLocaleDateString()}</span>
-          </div>
-        </div>
-      </div>
+        {/* Error Message */}
+        {errorMessage && (
+          <Alert
+            type="error"
+            message={errorMessage}
+            onDismiss={() => dismissMessage('error')}
+          />
+        )}
 
-      {/* Edit Form */}
-      <div className="bg-white shadow rounded-lg">
-        <form onSubmit={handleSubmit} className="px-4 py-5 sm:p-6">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        {/* Current Order Info */}
+        <View style={styles.currentOrderInfo}>
+          <Text style={styles.currentOrderTitle}>Current Order Information</Text>
+          <View style={styles.currentOrderGrid}>
+            <View style={styles.currentOrderItem}>
+              <Text style={styles.currentOrderLabel}>Status:</Text>
+              <Text style={styles.currentOrderValue}>{order.status.replace('_', ' ')}</Text>
+            </View>
+            <View style={styles.currentOrderItem}>
+              <Text style={styles.currentOrderLabel}>Vehicle:</Text>
+              <Text style={styles.currentOrderValue}>{vehicle?.name || 'Unknown Vehicle'}</Text>
+            </View>
+            <View style={styles.currentOrderItem}>
+              <Text style={styles.currentOrderLabel}>Created:</Text>
+              <Text style={styles.currentOrderValue}>{new Date(order.createdAt).toLocaleDateString()}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Edit Form */}
+        <View style={styles.formContainer}>
+          <View style={styles.formContent}>
             {/* Vehicle Selection */}
-            <div className="sm:col-span-2">
-              <label htmlFor="vehicleId" className="block text-sm font-medium text-gray-700 mb-1">
-                Vehicle *
-              </label>
-              <select
-                id="vehicleId"
-                name="vehicleId"
-                value={formData.vehicleId}
-                onChange={handleInputChange}
-                required
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            <View style={styles.inputGroup}>
+              <Label>Vehicle *</Label>
+              <Input
+                as="select"
+                selectedValue={formData.vehicleId}
+                onValueChange={(value) => handleInputChange('vehicleId', value)}
+                enabled={!isLoading}
               >
-                <option value="">Select a vehicle</option>
+                <Input.Item label="Select a vehicle" value="" />
                 {availableVehicles.map((vehicle) => (
-                  <option key={vehicle.id} value={vehicle.id}>
-                    {vehicle.name} - {vehicle.make} {vehicle.model} {vehicle.year}
-                  </option>
+                  <Input.Item 
+                    key={vehicle.id} 
+                    label={`${vehicle.name} - ${vehicle.make} ${vehicle.model} ${vehicle.year}`}
+                    value={vehicle.id}
+                  />
                 ))}
-              </select>
-            </div>
+              </Input>
+            </View>
 
             {/* Service Description */}
-            <div className="sm:col-span-2">
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                Service Description *
-              </label>
-              <textarea
-                id="description"
-                name="description"
+            <View style={styles.inputGroup}>
+              <Label>Service Description *</Label>
+              <Input
+                as="textarea"
                 value={formData.description}
-                onChange={handleInputChange}
-                required
-                rows={4}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                onChangeText={(value) => handleInputChange('description', value)}
                 placeholder="Describe the maintenance work to be performed..."
+                rows={4}
+                editable={!isLoading}
               />
-            </div>
+            </View>
 
             {/* Start Date */}
-            <div>
-              <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">
-                Start Date *
-              </label>
-              <input
-                type="date"
-                id="startDate"
-                name="startDate"
+            <View style={styles.inputGroup}>
+              <Label>Start Date *</Label>
+              <Input
                 value={formData.startDate}
-                onChange={handleInputChange}
-                required
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                onChangeText={(value) => handleInputChange('startDate', value)}
+                placeholder="YYYY-MM-DD"
+                editable={!isLoading}
               />
-            </div>
+            </View>
 
             {/* Estimated Completion Date */}
-            <div>
-              <label htmlFor="estimatedCompletionDate" className="block text-sm font-medium text-gray-700 mb-1">
-                Estimated Completion Date *
-              </label>
-              <input
-                type="date"
-                id="estimatedCompletionDate"
-                name="estimatedCompletionDate"
+            <View style={styles.inputGroup}>
+              <Label>Estimated Completion Date *</Label>
+              <Input
                 value={formData.estimatedCompletionDate}
-                onChange={handleInputChange}
-                required
-                min={formData.startDate || getTodayString()}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                onChangeText={(value) => handleInputChange('estimatedCompletionDate', value)}
+                placeholder="YYYY-MM-DD"
+                editable={!isLoading}
               />
-            </div>
+            </View>
 
             {/* Location */}
-            <div>
-              <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
-                Location
-              </label>
-              <input
-                type="text"
-                id="location"
-                name="location"
+            <View style={styles.inputGroup}>
+              <Label>Location</Label>
+              <Input
                 value={formData.location}
-                onChange={handleInputChange}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                onChangeText={(value) => handleInputChange('location', value)}
                 placeholder="e.g., Main Garage, Service Center A"
+                editable={!isLoading}
               />
-            </div>
+            </View>
 
             {/* Type */}
-            <div>
-              <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
-                Maintenance Type
-              </label>
-              <select
-                id="type"
-                name="type"
-                value={formData.type}
-                onChange={handleInputChange}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            <View style={styles.inputGroup}>
+              <Label>Maintenance Type</Label>
+              <Input
+                as="select"
+                selectedValue={formData.type}
+                onValueChange={(value) => handleInputChange('type', value)}
+                enabled={!isLoading}
               >
-                <option value="">Select type</option>
-                <option value="Preventive">Preventive</option>
-                <option value="Corrective">Corrective</option>
-                <option value="Emergency">Emergency</option>
-                <option value="Inspection">Inspection</option>
-                <option value="Repair">Repair</option>
-                <option value="Service">Service</option>
-              </select>
-            </div>
+                <Input.Item label="Select type" value="" />
+                <Input.Item label="Preventive" value="Preventive" />
+                <Input.Item label="Corrective" value="Corrective" />
+                <Input.Item label="Emergency" value="Emergency" />
+                <Input.Item label="Inspection" value="Inspection" />
+                <Input.Item label="Repair" value="Repair" />
+                <Input.Item label="Service" value="Service" />
+              </Input>
+            </View>
 
             {/* Urgent Checkbox */}
-            <div className="sm:col-span-2">
-              <div className="flex items-center">
-                <input
-                  id="urgent"
-                  name="urgent"
-                  type="checkbox"
-                  checked={formData.urgent}
-                  onChange={handleInputChange}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="urgent" className="ml-2 block text-sm text-gray-900">
-                  Mark as urgent
-                </label>
-              </div>
-              <p className="mt-1 text-sm text-gray-500">
+            <View style={styles.checkboxGroup}>
+              <TouchableOpacity
+                style={styles.checkboxItem}
+                onPress={() => handleInputChange('urgent', !formData.urgent)}
+                disabled={isLoading}
+                activeOpacity={0.7}
+              >
+                <View style={[
+                  styles.checkbox,
+                  formData.urgent && styles.checkboxChecked
+                ]}>
+                  {formData.urgent && (
+                    <MaterialIcons name="check" size={16} color="white" />
+                  )}
+                </View>
+                <Text style={styles.checkboxLabel}>Mark as urgent</Text>
+              </TouchableOpacity>
+              <Text style={styles.inputHint}>
                 Urgent orders will be prioritized and highlighted in the system
-              </p>
-            </div>
+              </Text>
+            </View>
 
             {/* Cost */}
-            <div>
-              <label htmlFor="cost" className="block text-sm font-medium text-gray-700 mb-1">
-                Estimated Cost
-              </label>
-              <input
-                type="number"
-                id="cost"
-                name="cost"
+            <View style={styles.inputGroup}>
+              <Label>Estimated Cost</Label>
+              <Input
                 value={formData.cost}
-                onChange={handleInputChange}
-                min="0"
-                step="0.01"
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                onChangeText={(value) => handleInputChange('cost', value)}
                 placeholder="0.00"
+                keyboardType="numeric"
+                editable={!isLoading}
               />
-            </div>
+            </View>
 
             {/* Status (Read-only) */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Status (Read-only)
-              </label>
-              <input
-                type="text"
+            <View style={styles.inputGroup}>
+              <Label>Status (Read-only)</Label>
+              <Input
                 value={order.status.replace('_', ' ').toUpperCase()}
-                disabled
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-500 sm:text-sm cursor-not-allowed"
+                editable={false}
+                style={styles.readOnlyInput}
               />
-              <p className="mt-1 text-sm text-gray-500">
+              <Text style={styles.inputHint}>
                 Status cannot be changed through editing. Use authorization workflow for status changes.
-              </p>
-            </div>
+              </Text>
+            </View>
 
             {/* Quotation Details */}
-            <div className="sm:col-span-2">
-              <label htmlFor="quotationDetails" className="block text-sm font-medium text-gray-700 mb-1">
-                Quotation Details
-              </label>
-              <textarea
-                id="quotationDetails"
-                name="quotationDetails"
+            <View style={styles.inputGroup}>
+              <Label>Quotation Details</Label>
+              <Input
+                as="textarea"
                 value={formData.quotationDetails}
-                onChange={handleInputChange}
-                rows={3}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                onChangeText={(value) => handleInputChange('quotationDetails', value)}
                 placeholder="Detailed breakdown of costs, parts, labor, etc..."
+                rows={3}
+                editable={!isLoading}
               />
-            </div>
+            </View>
 
             {/* Comments */}
-            <div className="sm:col-span-2">
-              <label htmlFor="comments" className="block text-sm font-medium text-gray-700 mb-1">
-                Comments
-              </label>
-              <textarea
-                id="comments"
-                name="comments"
+            <View style={styles.inputGroup}>
+              <Label>Comments</Label>
+              <Input
+                as="textarea"
                 value={formData.comments}
-                onChange={handleInputChange}
-                rows={3}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                onChangeText={(value) => handleInputChange('comments', value)}
                 placeholder="Additional notes or special instructions..."
+                rows={3}
+                editable={!isLoading}
               />
-            </div>
-          </div>
+            </View>
+          </View>
 
           {/* Form Actions */}
-          <div className="mt-6 flex items-center justify-end space-x-3">
-            <Link
-              to={`/maintenance-orders/${order.id}`}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+          <View style={styles.formActions}>
+            <Button
+              onPress={() => navigation.navigate('MaintenanceOrderDetail', { id: order.id })}
+              variant="secondary"
+              style={styles.actionButton}
             >
               Cancel
-            </Link>
-            <button
-              type="submit"
+            </Button>
+            <Button
+              onPress={handleSubmit}
               disabled={isLoading}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              variant="primary"
+              style={styles.actionButton}
             >
               {isLoading ? (
-                <>
-                  <LoadingSpinner size="sm" className="text-white mr-2" />
-                  Updating Order...
-                </>
+                <View style={styles.loadingContent}>
+                  <LoadingSpinner size="sm" color="white" />
+                  <Text style={styles.loadingText}>Updating Order...</Text>
+                </View>
               ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Update Order
-                </>
+                <View style={styles.buttonContent}>
+                  <MaterialIcons name="save" size={16} color="white" />
+                  <Text style={styles.buttonText}>Update Order</Text>
+                </View>
               )}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+            </Button>
+          </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 24,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#ef4444',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  header: {
+    marginBottom: 24,
+  },
+  headerContent: {
+    gap: 16,
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+  },
+  backButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButtonText: {
+    color: '#6b7280',
+    marginLeft: 4,
+    fontSize: 14,
+  },
+  headerInfo: {
+    gap: 4,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  currentOrderInfo: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 24,
+  },
+  currentOrderTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  currentOrderGrid: {
+    gap: 16,
+  },
+  currentOrderItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  currentOrderLabel: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  currentOrderValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+    textTransform: 'capitalize',
+  },
+  formContainer: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  formContent: {
+    gap: 24,
+  },
+  inputGroup: {
+    gap: 8,
+  },
+  inputHint: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  checkboxGroup: {
+    gap: 8,
+  },
+  checkboxItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  checkbox: {
+    width: 16,
+    height: 16,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 3,
+    marginRight: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'white',
+  },
+  checkboxChecked: {
+    backgroundColor: '#2563eb',
+    borderColor: '#2563eb',
+  },
+  checkboxLabel: {
+    fontSize: 14,
+    color: '#111827',
+  },
+  readOnlyInput: {
+    backgroundColor: '#f3f4f6',
+    color: '#6b7280',
+  },
+  formActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 24,
+    gap: 12,
+  },
+  actionButton: {
+    flex: 1,
+  },
+  loadingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    color: 'white',
+    marginLeft: 8,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    marginLeft: 8,
+  },
+});

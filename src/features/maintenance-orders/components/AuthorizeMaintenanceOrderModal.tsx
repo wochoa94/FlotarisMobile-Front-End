@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle, AlertCircle, DollarSign } from 'lucide-react';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { LoadingSpinner } from '../../../components/ui/LoadingSpinner';
 import { MaintenanceOrder } from '../../../types';
 import { Button } from '../../../components/ui/Button';
 import { Label } from '../../../components/ui/Label';
 import { Input } from '../../../components/ui/Input';
 import { Alert } from '../../../components/ui/Alert';
+import { Modal } from '../../../components/ui/Modal';
 
 interface AuthorizeMaintenanceOrderModalProps {
   isOpen: boolean;
@@ -41,8 +43,7 @@ export function AuthorizeMaintenanceOrderModal({
     }
   }, [isOpen, order]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+  const handleInputChange = (name: string, value: string) => {
     setFormData(prev => ({
       ...prev,
       [name]: value,
@@ -70,9 +71,7 @@ export function AuthorizeMaintenanceOrderModal({
     return null;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleSubmit = async () => {
     const error = validateForm();
     if (error) {
       setValidationError(error);
@@ -93,159 +92,237 @@ export function AuthorizeMaintenanceOrderModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
-      <div className="relative bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4">
-        <div className="p-6">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-              <div className="ml-3">
-                <h3 className="text-lg font-medium text-gray-900">Authorize Maintenance Order</h3>
-                <p className="text-sm text-gray-500">Order #{order.orderNumber}</p>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              disabled={isLoading}
-              className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
-            >
-              <X className="h-6 w-6" />
-            </button>
-          </div>
-
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      headerContent={
+        <View style={styles.headerContent}>
+          <MaterialIcons name="check-circle" size={24} color="#10b981" />
+          <View style={styles.headerText}>
+            <Text style={styles.headerTitle}>Authorize Maintenance Order</Text>
+            <Text style={styles.headerSubtitle}>Order #{order.orderNumber}</Text>
+          </View>
+        </View>
+      }
+      footerContent={
+        <View style={styles.footerContent}>
+          <Button
+            onPress={onClose}
+            disabled={isLoading}
+            variant="secondary"
+            style={styles.footerButton}
+          >
+            Cancel
+          </Button>
+          <Button
+            onPress={handleSubmit}
+            disabled={isLoading}
+            variant="primary"
+            style={[styles.footerButton, styles.authorizeButton]}
+          >
+            {isLoading ? (
+              <View style={styles.loadingContent}>
+                <LoadingSpinner size="sm" color="white" />
+                <Text style={styles.loadingText}>Authorizing...</Text>
+              </View>
+            ) : (
+              <View style={styles.buttonContent}>
+                <MaterialIcons name="check-circle" size={16} color="white" />
+                <Text style={styles.buttonText}>Authorize Order</Text>
+              </View>
+            )}
+          </Button>
+        </View>
+      }
+    >
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoidingView}
+      >
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           {/* Order Summary */}
-          <div className="bg-gray-50 rounded-md p-4 mb-6">
-            <h4 className="text-sm font-medium text-gray-900 mb-2">Order Summary</h4>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-gray-500">Start Date:</span>
-                <span className="ml-2 font-medium">{new Date(order.startDate).toLocaleDateString()}</span>
-              </div>
-              <div>
-                <span className="text-gray-500">Est. Completion:</span>
-                <span className="ml-2 font-medium">{new Date(order.estimatedCompletionDate).toLocaleDateString()}</span>
-              </div>
-              <div className="col-span-2">
-                <span className="text-gray-500">Description:</span>
-                <p className="mt-1 text-gray-900">{order.description}</p>
-              </div>
-            </div>
-          </div>
+          <View style={styles.orderSummary}>
+            <Text style={styles.sectionTitle}>Order Summary</Text>
+            <View style={styles.summaryGrid}>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>Start Date:</Text>
+                <Text style={styles.summaryValue}>{new Date(order.startDate).toLocaleDateString()}</Text>
+              </View>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>Est. Completion:</Text>
+                <Text style={styles.summaryValue}>{new Date(order.estimatedCompletionDate).toLocaleDateString()}</Text>
+              </View>
+              <View style={styles.summaryItemFull}>
+                <Text style={styles.summaryLabel}>Description:</Text>
+                <Text style={styles.summaryDescription}>{order.description}</Text>
+              </View>
+            </View>
+          </View>
 
           {/* Validation Error */}
           {validationError && (
-            <div className="rounded-md bg-red-50 border border-red-200 p-4 mb-6">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <AlertCircle className="h-5 w-5 text-red-400" />
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-red-800">{validationError}</p>
-                </div>
-              </div>
-            </div>
+            <Alert
+              type="error"
+              message={validationError}
+              onDismiss={() => setValidationError(null)}
+            />
           )}
 
           {/* Authorization Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <View style={styles.formContainer}>
             {/* Cost */}
-            <div>
-              <Label htmlFor="cost">
-                Authorized Cost *
-              </Label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <DollarSign className="h-4 w-4 text-gray-400" />
-                </div>
+            <View style={styles.inputGroup}>
+              <Label>Authorized Cost *</Label>
+              <View style={styles.costInputWrapper}>
+                <View style={styles.costIcon}>
+                  <MaterialIcons name="attach-money" size={16} color="#9ca3af" />
+                </View>
                 <Input
-                  type="number"
-                  id="cost"
-                  name="cost"
                   value={formData.cost}
-                  onChange={handleInputChange}
-                  required
-                  min="0"
-                  step="0.01"
-                  disabled={isLoading}
-                  className="pl-10 focus:ring-green-500 focus:border-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onChangeText={(value) => handleInputChange('cost', value)}
                   placeholder="0.00"
+                  keyboardType="numeric"
+                  editable={!isLoading}
+                  style={styles.costInput}
                 />
-              </div>
-            </div>
+              </View>
+            </View>
 
             {/* Quotation Details */}
-            <div>
-              <Label htmlFor="quotationDetails">
-                Quotation Details *
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>Quotation Details *</Label>
               <Input
                 as="textarea"
-                id="quotationDetails"
-                name="quotationDetails"
                 value={formData.quotationDetails}
-                onChange={handleInputChange}
-                required
-                rows={4}
-                disabled={isLoading}
-                className="focus:ring-green-500 focus:border-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                onChangeText={(value) => handleInputChange('quotationDetails', value)}
                 placeholder="Detailed breakdown of authorized costs, parts, labor, etc..."
+                rows={4}
+                editable={!isLoading}
               />
-            </div>
+            </View>
 
             {/* Comments */}
-            <div>
-              <Label htmlFor="comments">
-                Authorization Comments
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>Authorization Comments</Label>
               <Input
                 as="textarea"
-                id="comments"
-                name="comments"
                 value={formData.comments}
-                onChange={handleInputChange}
-                rows={3}
-                disabled={isLoading}
-                className="focus:ring-green-500 focus:border-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                onChangeText={(value) => handleInputChange('comments', value)}
                 placeholder="Additional authorization notes or special instructions..."
+                rows={3}
+                editable={!isLoading}
               />
-            </div>
-
-            {/* Form Actions */}
-            <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
-              <Button
-                type="button"
-                onClick={onClose}
-                disabled={isLoading}
-                variant="secondary"
-                className="focus:ring-green-500"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isLoading}
-                variant="primary"
-                className="bg-green-600 hover:bg-green-700 focus:ring-green-500"
-              >
-                {isLoading ? (
-                  <>
-                    <LoadingSpinner size="sm" className="text-white mr-2" />
-                    Authorizing...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Authorize Order
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerText: {
+    marginLeft: 12,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  orderSummary: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 6,
+    padding: 16,
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  summaryGrid: {
+    gap: 16,
+  },
+  summaryItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  summaryItemFull: {
+    gap: 4,
+  },
+  summaryLabel: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  summaryDescription: {
+    fontSize: 14,
+    color: '#111827',
+  },
+  formContainer: {
+    gap: 24,
+  },
+  inputGroup: {
+    gap: 8,
+  },
+  costInputWrapper: {
+    position: 'relative',
+  },
+  costIcon: {
+    position: 'absolute',
+    left: 12,
+    top: 12,
+    zIndex: 1,
+  },
+  costInput: {
+    paddingLeft: 40,
+  },
+  footerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  footerButton: {
+    flex: 1,
+  },
+  authorizeButton: {
+    backgroundColor: '#10b981',
+  },
+  loadingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    color: 'white',
+    marginLeft: 8,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    marginLeft: 8,
+  },
+});

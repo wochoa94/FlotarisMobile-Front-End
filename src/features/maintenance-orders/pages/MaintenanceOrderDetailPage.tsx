@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit, Calendar, Clock, DollarSign, Truck, FileText, User, MapPin, AlertTriangle, CheckCircle, X } from 'lucide-react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFleetData } from '../../../hooks/useFleetData';
 import { useAuth } from '../../../hooks/useAuth';
 import { maintenanceOrderService } from '../../../services/apiService';
 import { LoadingSpinner } from '../../../components/ui/LoadingSpinner';
 import { AuthorizeMaintenanceOrderModal } from '../components/AuthorizeMaintenanceOrderModal';
 import { formatDate } from '../../../utils/dateUtils';
-
+import { Button } from '../../../components/ui/Button';
 import { Badge } from '../../../components/ui/Badge';
 import { Alert } from '../../../components/ui/Alert';
+import { Card, CardBody } from '../../../components/ui/Card';
 
 // Enhanced error parsing function
 function parseBackendError(error: Error): { type: 'validation' | 'conflict' | 'authorization' | 'network' | 'generic'; message: string } {
@@ -64,8 +66,9 @@ function parseBackendError(error: Error): { type: 'validation' | 'conflict' | 'a
 }
 
 export function MaintenanceOrderDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const route = useRoute();
+  const navigation = useNavigation();
+  const { id } = route.params as { id: string };
   const { data, loading, error, refreshData } = useFleetData();
   const { user } = useAuth();
 
@@ -151,23 +154,23 @@ export function MaintenanceOrderDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <View style={styles.centerContainer}>
         <LoadingSpinner size="lg" />
-      </div>
+      </View>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-12">
-        <div className="text-red-600 mb-4">{error}</div>
-        <button 
-          onClick={() => window.location.reload()} 
-          className="text-blue-600 hover:text-blue-700"
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <Button 
+          onPress={() => navigation.goBack()}
+          variant="primary"
         >
           Try again
-        </button>
-      </div>
+        </Button>
+      </View>
     );
   }
 
@@ -179,51 +182,20 @@ export function MaintenanceOrderDetailPage() {
 
   if (!order) {
     return (
-      <div className="text-center py-12">
-        <div className="text-gray-500 mb-4">Maintenance order not found</div>
-        <button 
-          onClick={() => navigate('/maintenance-orders')} 
-          className="text-blue-600 hover:text-blue-700"
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorText}>Maintenance order not found</Text>
+        <Button 
+          onPress={() => navigation.navigate('MaintenanceOrders')}
+          variant="primary"
         >
           Back to maintenance orders
-        </button>
-      </div>
+        </Button>
+      </View>
     );
   }
 
-  // Enhanced error message styling based on error type
-  const getErrorMessageStyling = (type: string) => {
-    switch (type) {
-      case 'conflict':
-        return 'bg-orange-50 border-orange-200 text-orange-800';
-      case 'validation':
-        return 'bg-yellow-50 border-yellow-200 text-yellow-800';
-      case 'authorization':
-        return 'bg-purple-50 border-purple-200 text-purple-800';
-      case 'network':
-        return 'bg-blue-50 border-blue-200 text-blue-800';
-      default:
-        return 'bg-red-50 border-red-200 text-red-800';
-    }
-  };
-
-  const getErrorIcon = (type: string) => {
-    switch (type) {
-      case 'conflict':
-        return <AlertTriangle className="h-5 w-5 text-orange-400" />;
-      case 'validation':
-        return <AlertTriangle className="h-5 w-5 text-yellow-400" />;
-      case 'authorization':
-        return <AlertTriangle className="h-5 w-5 text-purple-400" />;
-      case 'network':
-        return <AlertTriangle className="h-5 w-5 text-blue-400" />;
-      default:
-        return <AlertTriangle className="h-5 w-5 text-red-400" />;
-    }
-  };
-
   return (
-    <div className="space-y-6">
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       {/* Success Message */}
       {successMessage && (
         <Alert
@@ -240,7 +212,7 @@ export function MaintenanceOrderDetailPage() {
           message={errorMessage}
           onDismiss={() => dismissMessage('error')}
         >
-          <div className="flex items-center space-x-2 mt-1">
+          <View style={styles.errorBadges}>
             {errorType === 'conflict' && (
               <Badge type="orange" label="Schedule Conflict" size="sm" />
             )}
@@ -253,349 +225,330 @@ export function MaintenanceOrderDetailPage() {
             {errorType === 'network' && (
               <Badge type="blue" label="Network Error" size="sm" />
             )}
-          </div>
+          </View>
           {/* Additional context for specific error types */}
           {errorType === 'conflict' && (
-            <p className="text-xs mt-1 opacity-75">
+            <Text style={styles.errorContext}>
               This maintenance order conflicts with existing schedules. Please check the vehicle's current assignments.
-            </p>
+            </Text>
           )}
           {errorType === 'network' && (
-            <p className="text-xs mt-1 opacity-75">
+            <Text style={styles.errorContext}>
               Please check your internet connection and try again. If the problem persists, contact support.
-            </p>
+            </Text>
           )}
         </Alert>
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={() => navigate('/maintenance-orders')}
-            className="inline-flex items-center text-gray-500 hover:text-gray-700"
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('MaintenanceOrders')}
+            style={styles.backButton}
+            activeOpacity={0.7}
           >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back to Maintenance Orders
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Order #{order.orderNumber}</h1>
-            <p className="text-sm text-gray-600">
+            <View style={styles.backButtonContent}>
+              <MaterialIcons name="arrow-back" size={16} color="#6b7280" />
+              <Text style={styles.backButtonText}>Back to Maintenance Orders</Text>
+            </View>
+          </TouchableOpacity>
+          <View style={styles.headerInfo}>
+            <Text style={styles.headerTitle}>Order #{order.orderNumber}</Text>
+            <Text style={styles.headerSubtitle}>
               {vehicle ? `${vehicle.name} - ${vehicle.make} ${vehicle.model}` : 'Unknown Vehicle'}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center space-x-3">
-          {user?.isAdmin && (
-            <Link
-              to={`/maintenance-orders/${order.id}/edit`}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            </Text>
+          </View>
+        </View>
+        {user?.isAdmin && (
+          <View style={styles.headerActions}>
+            <Button
+              onPress={() => navigation.navigate('EditMaintenanceOrder', { id: order.id })}
+              variant="primary"
+              style={styles.headerButton}
             >
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Order
-            </Link>
-          )}
-          
-          {/* Authorize Order Button - Only show for admins and pending authorization orders */}
-          {user?.isAdmin && order.status === 'pending_authorization' && (
-            <button
-              onClick={() => setShowAuthorizeModal(true)}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-            >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Authorize Order
-            </button>
-          )}
-        </div>
-      </div>
+              <View style={styles.buttonContent}>
+                <MaterialIcons name="edit" size={16} color="white" />
+                <Text style={styles.buttonText}>Edit Order</Text>
+              </View>
+            </Button>
+            
+            {/* Authorize Order Button - Only show for admins and pending authorization orders */}
+            {order.status === 'pending_authorization' && (
+              <Button
+                onPress={() => setShowAuthorizeModal(true)}
+                variant="primary"
+                style={[styles.headerButton, styles.authorizeButton]}
+              >
+                <View style={styles.buttonContent}>
+                  <MaterialIcons name="check-circle" size={16} color="white" />
+                  <Text style={styles.buttonText}>Authorize Order</Text>
+                </View>
+              </Button>
+            )}
+          </View>
+        )}
+      </View>
 
       {/* Status and Key Metrics */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <FileText className="h-6 w-6 text-gray-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Status</dt>
-                  <dd className="mt-1">
-                    <Badge 
-                      type={order.status === 'active' ? 'green' : order.status === 'scheduled' ? 'blue' : order.status === 'pending_authorization' ? 'yellow' : 'gray'} 
-                      label={order.status === 'active' ? 'Active' : order.status === 'scheduled' ? 'Scheduled' : order.status === 'pending_authorization' ? 'Pending Authorization' : 'Completed'} 
-                    />
-                    {order.urgent && (
-                      <div className="mt-1">
-                        <Badge type="red" label="Urgent" size="sm" className="mt-1">
-                          <AlertTriangle className="h-3 w-3 mr-1" />
-                        </Badge>
-                      </div>
-                    )}
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Calendar className="h-6 w-6 text-blue-500" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Start Date</dt>
-                  <dd className="text-lg font-medium text-gray-900">
-                    {formatDate(order.startDate)}
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Clock className="h-6 w-6 text-green-500" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Est. Completion</dt>
-                  <dd className="text-lg font-medium text-gray-900">
-                    {formatDate(order.estimatedCompletionDate)}
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <DollarSign className="h-6 w-6 text-purple-500" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Cost</dt>
-                  <dd className="text-lg font-medium text-gray-900">
-                    {order.cost ? `$${order.cost.toLocaleString()}` : 'N/A'}
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Detailed Information */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Order Information */}
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-              Order Information
-            </h3>
-            <dl className="grid grid-cols-1 gap-4">
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Order ID</dt>
-                <dd className="mt-1 text-sm text-gray-900 font-mono">{order.id}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Order Number</dt>
-                <dd className="mt-1 text-sm text-gray-900 font-mono">{order.orderNumber}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Status</dt>
-                <dd className="mt-1">
+      <View style={styles.metricsGrid}>
+        <Card style={styles.metricCard}>
+          <CardBody>
+            <View style={styles.metricContent}>
+              <View style={styles.metricIcon}>
+                <MaterialIcons name="description" size={24} color="#6b7280" />
+              </View>
+              <View style={styles.metricInfo}>
+                <Text style={styles.metricLabel}>Status</Text>
+                <View style={styles.metricValue}>
                   <Badge 
                     type={order.status === 'active' ? 'green' : order.status === 'scheduled' ? 'blue' : order.status === 'pending_authorization' ? 'yellow' : 'gray'} 
                     label={order.status === 'active' ? 'Active' : order.status === 'scheduled' ? 'Scheduled' : order.status === 'pending_authorization' ? 'Pending Authorization' : 'Completed'} 
                   />
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Start Date</dt>
-                <dd className="mt-1 text-sm text-gray-900">
+                  {order.urgent && (
+                    <View style={styles.urgentBadge}>
+                      <Badge type="red" label="Urgent" size="sm">
+                        <MaterialIcons name="warning" size={12} color="#991b1b" />
+                      </Badge>
+                    </View>
+                  )}
+                </View>
+              </View>
+            </View>
+          </CardBody>
+        </Card>
+
+        <Card style={styles.metricCard}>
+          <CardBody>
+            <View style={styles.metricContent}>
+              <View style={[styles.metricIcon, { backgroundColor: '#dbeafe' }]}>
+                <MaterialIcons name="event" size={24} color="#2563eb" />
+              </View>
+              <View style={styles.metricInfo}>
+                <Text style={styles.metricLabel}>Start Date</Text>
+                <Text style={styles.metricValueText}>
                   {formatDate(order.startDate)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Estimated Completion Date</dt>
-                <dd className="mt-1 text-sm text-gray-900">
+                </Text>
+              </View>
+            </View>
+          </CardBody>
+        </Card>
+
+        <Card style={styles.metricCard}>
+          <CardBody>
+            <View style={styles.metricContent}>
+              <View style={[styles.metricIcon, { backgroundColor: '#dcfce7' }]}>
+                <MaterialIcons name="schedule" size={24} color="#10b981" />
+              </View>
+              <View style={styles.metricInfo}>
+                <Text style={styles.metricLabel}>Est. Completion</Text>
+                <Text style={styles.metricValueText}>
                   {formatDate(order.estimatedCompletionDate)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Location</dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  {order.location ? (
-                    <div className="flex items-center">
-                      <MapPin className="h-4 w-4 text-gray-400 mr-1" />
-                      {order.location}
-                    </div>
-                  ) : (
-                    'Not specified'
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Type</dt>
-                <dd className="mt-1 text-sm text-gray-900">{order.type || 'Not specified'}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Priority</dt>
-                <dd className="mt-1">
-                  {order.urgent ? (
-                    <Badge type="red" label="Urgent" size="sm">
-                      <AlertTriangle className="h-3 w-3 mr-1" />
-                    </Badge>
-                  ) : (
-                    <span className="text-sm text-gray-900">Normal</span>
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Cost</dt>
-                <dd className="mt-1 text-sm text-gray-900">
+                </Text>
+              </View>
+            </View>
+          </CardBody>
+        </Card>
+
+        <Card style={styles.metricCard}>
+          <CardBody>
+            <View style={styles.metricContent}>
+              <View style={[styles.metricIcon, { backgroundColor: '#f3e8ff' }]}>
+                <MaterialIcons name="attach-money" size={24} color="#8b5cf6" />
+              </View>
+              <View style={styles.metricInfo}>
+                <Text style={styles.metricLabel}>Cost</Text>
+                <Text style={styles.metricValueText}>
+                  {order.cost ? `$${order.cost.toLocaleString()}` : 'N/A'}
+                </Text>
+              </View>
+            </View>
+          </CardBody>
+        </Card>
+      </View>
+
+      {/* Detailed Information */}
+      <View style={styles.detailsGrid}>
+        {/* Order Information */}
+        <Card style={styles.detailCard}>
+          <CardBody>
+            <Text style={styles.sectionTitle}>Order Information</Text>
+            <View style={styles.detailsList}>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Order ID</Text>
+                <Text style={[styles.detailValue, styles.monoText]}>{order.id}</Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Order Number</Text>
+                <Text style={[styles.detailValue, styles.monoText]}>{order.orderNumber}</Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Status</Text>
+                <Badge 
+                  type={order.status === 'active' ? 'green' : order.status === 'scheduled' ? 'blue' : order.status === 'pending_authorization' ? 'yellow' : 'gray'} 
+                  label={order.status === 'active' ? 'Active' : order.status === 'scheduled' ? 'Scheduled' : order.status === 'pending_authorization' ? 'Pending Authorization' : 'Completed'} 
+                />
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Start Date</Text>
+                <Text style={styles.detailValue}>{formatDate(order.startDate)}</Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Estimated Completion Date</Text>
+                <Text style={styles.detailValue}>{formatDate(order.estimatedCompletionDate)}</Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Location</Text>
+                {order.location ? (
+                  <View style={styles.locationContainer}>
+                    <MaterialIcons name="place" size={16} color="#6b7280" />
+                    <Text style={styles.locationText}>{order.location}</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.detailValue}>Not specified</Text>
+                )}
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Type</Text>
+                <Text style={styles.detailValue}>{order.type || 'Not specified'}</Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Priority</Text>
+                {order.urgent ? (
+                  <Badge type="red" label="Urgent" size="sm">
+                    <MaterialIcons name="warning" size={12} color="#991b1b" />
+                  </Badge>
+                ) : (
+                  <Text style={styles.detailValue}>Normal</Text>
+                )}
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Cost</Text>
+                <Text style={styles.detailValue}>
                   {order.cost ? `$${order.cost.toLocaleString()}` : 'Not specified'}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Created</dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  {formatDate(order.createdAt)}
-                </dd>
-              </div>
-            </dl>
-          </div>
-        </div>
+                </Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Created</Text>
+                <Text style={styles.detailValue}>{formatDate(order.createdAt)}</Text>
+              </View>
+            </View>
+          </CardBody>
+        </Card>
 
         {/* Vehicle Information */}
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-              <Truck className="h-5 w-5 inline mr-2" />
-              Vehicle Information
-            </h3>
+        <Card style={styles.detailCard}>
+          <CardBody>
+            <View style={styles.sectionHeader}>
+              <MaterialCommunityIcons name="truck" size={20} color="#6b7280" />
+              <Text style={styles.sectionTitleWithIcon}>Vehicle Information</Text>
+            </View>
             {vehicle ? (
-              <dl className="space-y-4">
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Vehicle Name</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{vehicle.name}</dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Make/Model/Year</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
+              <View style={styles.detailsList}>
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Vehicle Name</Text>
+                  <Text style={styles.detailValue}>{vehicle.name}</Text>
+                </View>
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Make/Model/Year</Text>
+                  <Text style={styles.detailValue}>
                     {vehicle.make} {vehicle.model} {vehicle.year}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">License Plate</dt>
-                  <dd className="mt-1 text-sm text-gray-900">{vehicle.licensePlate || 'N/A'}</dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">VIN</dt>
-                  <dd className="mt-1 text-sm text-gray-900 font-mono">{vehicle.vin || 'N/A'}</dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Current Mileage</dt>
-                  <dd className="mt-1 text-sm text-gray-900">
+                  </Text>
+                </View>
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>License Plate</Text>
+                  <Text style={styles.detailValue}>{vehicle.licensePlate || 'N/A'}</Text>
+                </View>
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>VIN</Text>
+                  <Text style={[styles.detailValue, styles.monoText]}>{vehicle.vin || 'N/A'}</Text>
+                </View>
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Current Mileage</Text>
+                  <Text style={styles.detailValue}>
                     {vehicle.mileage?.toLocaleString() || 'N/A'} miles
-                  </dd>
-                </div>
-                <div className="pt-4">
-                  <Link
-                    to={`/vehicles/${vehicle.id}`}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  </Text>
+                </View>
+                <View style={styles.detailActions}>
+                  <Button
+                    onPress={() => navigation.navigate('VehicleDetail', { id: vehicle.id })}
+                    variant="secondary"
                   >
                     View Vehicle Details
-                  </Link>
-                </div>
-              </dl>
+                  </Button>
+                </View>
+              </View>
             ) : (
-              <p className="text-gray-500">Vehicle information not available</p>
+              <Text style={styles.noDataText}>Vehicle information not available</Text>
             )}
-          </div>
-        </div>
-      </div>
+          </CardBody>
+        </Card>
+      </View>
 
       {/* Order Description */}
       {order.description && (
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-              Service Description
-            </h3>
-            <div className="bg-gray-50 rounded-md p-4">
-              <p className="text-sm text-gray-900 whitespace-pre-wrap">{order.description}</p>
-            </div>
-          </div>
-        </div>
+        <Card style={styles.descriptionCard}>
+          <CardBody>
+            <Text style={styles.sectionTitle}>Service Description</Text>
+            <View style={styles.descriptionContent}>
+              <Text style={styles.descriptionText}>{order.description}</Text>
+            </View>
+          </CardBody>
+        </Card>
       )}
 
       {/* Quotation Details */}
       {order.quotationDetails && (
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-              Quotation Details
-            </h3>
-            <div className="bg-blue-50 rounded-md p-4">
-              <p className="text-sm text-gray-900 whitespace-pre-wrap">{order.quotationDetails}</p>
-            </div>
-          </div>
-        </div>
+        <Card style={styles.quotationCard}>
+          <CardBody>
+            <Text style={styles.sectionTitle}>Quotation Details</Text>
+            <View style={styles.quotationContent}>
+              <Text style={styles.quotationText}>{order.quotationDetails}</Text>
+            </View>
+          </CardBody>
+        </Card>
       )}
 
       {/* Comments */}
       {order.comments && (
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-              Comments
-            </h3>
-            <div className="bg-yellow-50 rounded-md p-4">
-              <p className="text-sm text-gray-900 whitespace-pre-wrap">{order.comments}</p>
-            </div>
-          </div>
-        </div>
+        <Card style={styles.commentsCard}>
+          <CardBody>
+            <Text style={styles.sectionTitle}>Comments</Text>
+            <View style={styles.commentsContent}>
+              <Text style={styles.commentsText}>{order.comments}</Text>
+            </View>
+          </CardBody>
+        </Card>
       )}
 
       {/* Assigned Driver */}
       {assignedDriver && (
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-              <User className="h-5 w-5 inline mr-2" />
-              Assigned Driver
-            </h3>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="bg-purple-100 p-3 rounded-full">
-                  <User className="h-6 w-6 text-purple-600" />
-                </div>
-                <div>
-                  <h4 className="text-lg font-medium text-gray-900">{assignedDriver.name}</h4>
-                  <p className="text-sm text-gray-500">{assignedDriver.email}</p>
-                  <p className="text-sm text-gray-500">ID: {assignedDriver.idNumber}</p>
-                </div>
-              </div>
-              <Link
-                to={`/drivers/${assignedDriver.id}`}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        <Card style={styles.driverCard}>
+          <CardBody>
+            <View style={styles.sectionHeader}>
+              <MaterialCommunityIcons name="account" size={20} color="#6b7280" />
+              <Text style={styles.sectionTitleWithIcon}>Assigned Driver</Text>
+            </View>
+            <View style={styles.driverContent}>
+              <View style={styles.driverInfo}>
+                <View style={styles.driverAvatar}>
+                  <MaterialCommunityIcons name="account" size={24} color="#8b5cf6" />
+                </View>
+                <View style={styles.driverDetails}>
+                  <Text style={styles.driverName}>{assignedDriver.name}</Text>
+                  <Text style={styles.driverEmail}>{assignedDriver.email}</Text>
+                  <Text style={styles.driverId}>ID: {assignedDriver.idNumber}</Text>
+                </View>
+              </View>
+              <Button
+                onPress={() => navigation.navigate('DriverDetail', { id: assignedDriver.id })}
+                variant="secondary"
               >
                 View Driver Details
-              </Link>
-            </div>
-          </div>
-        </div>
+              </Button>
+            </View>
+          </CardBody>
+        </Card>
       )}
 
       {/* Authorization Modal */}
@@ -606,6 +559,275 @@ export function MaintenanceOrderDetailPage() {
         order={order}
         isLoading={isAuthorizing}
       />
-    </div>
+    </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  scrollContent: {
+    padding: 24,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#ef4444',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  errorBadges: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
+  },
+  errorContext: {
+    fontSize: 12,
+    marginTop: 4,
+    opacity: 0.75,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 24,
+  },
+  headerLeft: {
+    flex: 1,
+    gap: 16,
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+  },
+  backButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButtonText: {
+    color: '#6b7280',
+    marginLeft: 4,
+    fontSize: 14,
+  },
+  headerInfo: {
+    gap: 4,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  headerActions: {
+    gap: 12,
+    marginLeft: 16,
+  },
+  headerButton: {
+    minWidth: 120,
+  },
+  authorizeButton: {
+    backgroundColor: '#10b981',
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    marginLeft: 8,
+  },
+  metricsGrid: {
+    gap: 16,
+    marginBottom: 24,
+  },
+  metricCard: {
+    marginBottom: 0,
+  },
+  metricContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  metricIcon: {
+    width: 48,
+    height: 48,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 20,
+  },
+  metricInfo: {
+    flex: 1,
+  },
+  metricLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6b7280',
+    marginBottom: 4,
+  },
+  metricValue: {
+    gap: 4,
+  },
+  metricValueText: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  urgentBadge: {
+    marginTop: 4,
+  },
+  detailsGrid: {
+    gap: 24,
+    marginBottom: 24,
+  },
+  detailCard: {
+    marginBottom: 0,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+    marginBottom: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionTitleWithIcon: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+    marginLeft: 8,
+  },
+  detailsList: {
+    gap: 16,
+  },
+  detailItem: {
+    gap: 4,
+  },
+  detailLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  detailValue: {
+    fontSize: 14,
+    color: '#111827',
+  },
+  monoText: {
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  locationText: {
+    fontSize: 14,
+    color: '#111827',
+    marginLeft: 4,
+  },
+  detailActions: {
+    marginTop: 16,
+  },
+  noDataText: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontStyle: 'italic',
+  },
+  descriptionCard: {
+    marginBottom: 24,
+  },
+  descriptionContent: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 6,
+    padding: 16,
+  },
+  descriptionText: {
+    fontSize: 14,
+    color: '#111827',
+    lineHeight: 20,
+  },
+  quotationCard: {
+    marginBottom: 24,
+  },
+  quotationContent: {
+    backgroundColor: '#eff6ff',
+    borderRadius: 6,
+    padding: 16,
+  },
+  quotationText: {
+    fontSize: 14,
+    color: '#111827',
+    lineHeight: 20,
+  },
+  commentsCard: {
+    marginBottom: 24,
+  },
+  commentsContent: {
+    backgroundColor: '#fffbeb',
+    borderRadius: 6,
+    padding: 16,
+  },
+  commentsText: {
+    fontSize: 14,
+    color: '#111827',
+    lineHeight: 20,
+  },
+  driverCard: {
+    marginBottom: 24,
+  },
+  driverContent: {
+    gap: 16,
+  },
+  driverInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  driverAvatar: {
+    width: 48,
+    height: 48,
+    backgroundColor: '#f3e8ff',
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  driverDetails: {
+    flex: 1,
+  },
+  driverName: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  driverEmail: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 2,
+  },
+  driverId: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+});

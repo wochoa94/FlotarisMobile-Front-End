@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { MaintenanceOrder, MaintenanceOrderQueryParams, PaginatedMaintenanceOrdersResponse, MaintenanceOrderSummary } from '../../../types';
 import { maintenanceOrderService } from '../../../services/apiService';
 
@@ -39,26 +38,15 @@ interface UseMaintenanceOrdersDataReturn {
 }
 
 export function useMaintenanceOrdersData(): UseMaintenanceOrdersDataReturn {
-  const [searchParams, setSearchParams] = useSearchParams();
-  
-  // Initialize state from URL parameters
+  // Initialize state with default values (no URL parameters in mobile)
   const getInitialState = () => {
-    const search = searchParams.get('search') || '';
-    const status = searchParams.getAll('status');
-    // If no status filters are specified in URL, use backend's default filters
-    const defaultStatusFilters = status.length > 0 ? status : ['active', 'scheduled', 'pending_authorization'];
-    const sortBy = searchParams.get('sortBy') as SortColumn | null;
-    const sortOrder = (searchParams.get('sortOrder') as SortDirection) || 'desc'; // Default to newest first
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const limit = parseInt(searchParams.get('limit') || '10', 10);
-    
     return {
-      search,
-      status: defaultStatusFilters,
-      sortBy: sortBy || 'startDate', // Default sort by start date
-      sortOrder,
-      page,
-      limit,
+      search: '',
+      status: ['active', 'scheduled', 'pending_authorization'], // Default filters
+      sortBy: 'startDate' as SortColumn, // Default sort by start date
+      sortOrder: 'desc' as SortDirection, // Default to newest first
+      page: 1,
+      limit: 10,
     };
   };
 
@@ -102,20 +90,6 @@ export function useMaintenanceOrdersData(): UseMaintenanceOrdersDataReturn {
       }
     };
   }, [searchTerm]);
-
-  // Update URL parameters when state changes
-  const updateUrlParams = useCallback(() => {
-    const params = new URLSearchParams();
-    
-    if (debouncedSearchTerm) params.set('search', debouncedSearchTerm);
-    statusFilters.forEach(status => params.append('status', status));
-    if (sortBy) params.set('sortBy', sortBy);
-    if (sortOrder !== 'desc') params.set('sortOrder', sortOrder);
-    if (currentPage !== 1) params.set('page', currentPage.toString());
-    if (itemsPerPage !== 10) params.set('limit', itemsPerPage.toString());
-    
-    setSearchParams(params, { replace: true });
-  }, [debouncedSearchTerm, statusFilters, sortBy, sortOrder, currentPage, itemsPerPage, setSearchParams]);
 
   // Fetch data function
   const fetchData = useCallback(async () => {
@@ -162,11 +136,6 @@ export function useMaintenanceOrdersData(): UseMaintenanceOrdersDataReturn {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-  // Effect to update URL when state changes
-  useEffect(() => {
-    updateUrlParams();
-  }, [updateUrlParams]);
 
   // Action functions
   const setSearchTerm = useCallback((term: string) => {

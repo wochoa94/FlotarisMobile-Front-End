@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Plus, X, AlertCircle, CheckCircle } from 'lucide-react';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../../../hooks/useAuth';
 import { useFleetData } from '../../../hooks/useFleetData';
 import { maintenanceOrderService } from '../../../services/apiService';
@@ -25,7 +26,7 @@ interface MaintenanceOrderFormData {
 }
 
 export function AddMaintenanceOrderPage() {
-  const navigate = useNavigate();
+  const navigation = useNavigation();
   const { user } = useAuth();
   const { data, refreshData } = useFleetData();
   
@@ -57,21 +58,11 @@ export function AddMaintenanceOrderPage() {
     }
   }, [successMessage, errorMessage]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
-    
-    if (type === 'checkbox') {
-      const checked = (e.target as HTMLInputElement).checked;
-      setFormData(prev => ({
-        ...prev,
-        [name]: checked,
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
+  const handleInputChange = (name: string, value: string | boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const generateOrderNumber = (): string => {
@@ -109,9 +100,7 @@ export function AddMaintenanceOrderPage() {
     return null;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleSubmit = async () => {
     // Clear previous messages
     setSuccessMessage('');
     setErrorMessage('');
@@ -153,7 +142,7 @@ export function AddMaintenanceOrderPage() {
       
       // Redirect to maintenance orders page after a short delay
       setTimeout(() => {
-        navigate('/maintenance-orders');
+        navigation.navigate('MaintenanceOrders');
       }, 1500);
 
     } catch (error) {
@@ -190,287 +179,371 @@ export function AddMaintenanceOrderPage() {
   const availableVehicles = data.vehicles.filter(vehicle => vehicle.status !== 'maintenance');
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Link
-            to="/maintenance-orders"
-            className="inline-flex items-center text-gray-500 hover:text-gray-700 transition-colors duration-200"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back to Maintenance Orders
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Add New Maintenance Order</h1>
-            <p className="text-sm text-gray-600">
-              Create a new maintenance order for your fleet
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Success Message */}
-      {successMessage && (
-        <div className="rounded-md bg-green-50 border border-green-200 p-4 transition-all duration-300">
-          <div className="flex items-center justify-between">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <CheckCircle className="h-5 w-5 text-green-400" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-green-800">{successMessage}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => dismissMessage('success')}
-              className="text-green-400 hover:text-green-600 transition-colors duration-200"
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('MaintenanceOrders')}
+              style={styles.backButton}
+              activeOpacity={0.7}
             >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      )}
+              <View style={styles.backButtonContent}>
+                <MaterialIcons name="arrow-back" size={16} color="#6b7280" />
+                <Text style={styles.backButtonText}>Back to Maintenance Orders</Text>
+              </View>
+            </TouchableOpacity>
+            <View style={styles.headerInfo}>
+              <Text style={styles.headerTitle}>Add New Maintenance Order</Text>
+              <Text style={styles.headerSubtitle}>
+                Create a new maintenance order for your fleet
+              </Text>
+            </View>
+          </View>
+        </View>
 
-      {/* Error Message */}
-      {errorMessage && (
-        <div className="rounded-md bg-red-50 border border-red-200 p-4 transition-all duration-300">
-          <div className="flex items-center justify-between">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <AlertCircle className="h-5 w-5 text-red-400" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-red-800">{errorMessage}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => dismissMessage('error')}
-              className="text-red-400 hover:text-red-600 transition-colors duration-200"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      )}
+        {/* Success Message */}
+        {successMessage && (
+          <Alert
+            type="success"
+            message={successMessage}
+            onDismiss={() => dismissMessage('success')}
+          />
+        )}
 
-      {/* Form */}
-      <div className="bg-white shadow rounded-lg">
-        <form onSubmit={handleSubmit} className="px-4 py-5 sm:p-6">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        {/* Error Message */}
+        {errorMessage && (
+          <Alert
+            type="error"
+            message={errorMessage}
+            onDismiss={() => dismissMessage('error')}
+          />
+        )}
+
+        {/* Form */}
+        <View style={styles.formContainer}>
+          <View style={styles.formContent}>
             {/* Vehicle Selection */}
-            <div className="sm:col-span-2">
-              <Label htmlFor="vehicleId">
-                Vehicle *
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>Vehicle *</Label>
               <Input
                 as="select"
-                id="vehicleId"
-                name="vehicleId"
-                value={formData.vehicleId}
-                onChange={handleInputChange}
-                required
+                selectedValue={formData.vehicleId}
+                onValueChange={(value) => handleInputChange('vehicleId', value)}
+                enabled={!isLoading}
               >
-                <option value="">Select a vehicle</option>
+                <Input.Item label="Select a vehicle" value="" />
                 {availableVehicles.map((vehicle) => (
-                  <option key={vehicle.id} value={vehicle.id}>
-                    {vehicle.name} - {vehicle.make} {vehicle.model} {vehicle.year}
-                  </option>
+                  <Input.Item 
+                    key={vehicle.id} 
+                    label={`${vehicle.name} - ${vehicle.make} ${vehicle.model} ${vehicle.year}`}
+                    value={vehicle.id}
+                  />
                 ))}
               </Input>
               {availableVehicles.length === 0 && (
-                <p className="mt-1 text-sm text-red-600">No vehicles available for maintenance</p>
+                <Text style={styles.errorHint}>No vehicles available for maintenance</Text>
               )}
-              <p className="mt-1 text-sm text-gray-500">
+              <Text style={styles.inputHint}>
                 The backend will validate schedule conflicts with existing maintenance orders
-              </p>
-            </div>
+              </Text>
+            </View>
 
             {/* Service Description */}
-            <div className="sm:col-span-2">
-              <Label htmlFor="description">
-                Service Description *
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>Service Description *</Label>
               <Input
                 as="textarea"
-                id="description"
-                name="description"
                 value={formData.description}
-                onChange={handleInputChange}
-                required
-                rows={4}
+                onChangeText={(value) => handleInputChange('description', value)}
                 placeholder="Describe the maintenance work to be performed..."
+                rows={4}
+                editable={!isLoading}
               />
-            </div>
+            </View>
 
             {/* Start Date */}
-            <div>
-              <Label htmlFor="startDate">
-                Start Date *
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>Start Date *</Label>
               <Input
-                type="date"
-                id="startDate"
-                name="startDate"
                 value={formData.startDate}
-                onChange={handleInputChange}
-                required
-                min={getTodayString()}
+                onChangeText={(value) => handleInputChange('startDate', value)}
+                placeholder="YYYY-MM-DD"
+                editable={!isLoading}
               />
-            </div>
+              <Text style={styles.inputHint}>
+                Format: YYYY-MM-DD (e.g., {getTodayString()})
+              </Text>
+            </View>
 
             {/* Estimated Completion Date */}
-            <div>
-              <Label htmlFor="estimatedCompletionDate">
-                Estimated Completion Date *
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>Estimated Completion Date *</Label>
               <Input
-                type="date"
-                id="estimatedCompletionDate"
-                name="estimatedCompletionDate"
                 value={formData.estimatedCompletionDate}
-                onChange={handleInputChange}
-                required
-                min={formData.startDate || getTodayString()}
+                onChangeText={(value) => handleInputChange('estimatedCompletionDate', value)}
+                placeholder="YYYY-MM-DD"
+                editable={!isLoading}
               />
-            </div>
+              <Text style={styles.inputHint}>
+                Must be after start date
+              </Text>
+            </View>
 
             {/* Location */}
-            <div>
-              <Label htmlFor="location">
-                Location
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>Location</Label>
               <Input
-                type="text"
-                id="location"
-                name="location"
                 value={formData.location}
-                onChange={handleInputChange}
+                onChangeText={(value) => handleInputChange('location', value)}
                 placeholder="e.g., Main Garage, Service Center A"
+                editable={!isLoading}
               />
-            </div>
+            </View>
 
             {/* Type */}
-            <div>
-              <Label htmlFor="type">
-                Maintenance Type
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>Maintenance Type</Label>
               <Input
                 as="select"
-                id="type"
-                name="type"
-                value={formData.type}
-                onChange={handleInputChange}
+                selectedValue={formData.type}
+                onValueChange={(value) => handleInputChange('type', value)}
+                enabled={!isLoading}
               >
-                <option value="">Select type</option>
-                <option value="Preventive">Preventive</option>
-                <option value="Corrective">Corrective</option>
-                <option value="Emergency">Emergency</option>
-                <option value="Inspection">Inspection</option>
-                <option value="Repair">Repair</option>
-                <option value="Service">Service</option>
+                <Input.Item label="Select type" value="" />
+                <Input.Item label="Preventive" value="Preventive" />
+                <Input.Item label="Corrective" value="Corrective" />
+                <Input.Item label="Emergency" value="Emergency" />
+                <Input.Item label="Inspection" value="Inspection" />
+                <Input.Item label="Repair" value="Repair" />
+                <Input.Item label="Service" value="Service" />
               </Input>
-            </div>
+            </View>
 
             {/* Urgent Checkbox */}
-            <div className="sm:col-span-2">
-              <div className="flex items-center">
-                <input
-                  id="urgent"
-                  name="urgent"
-                  type="checkbox"
-                  checked={formData.urgent}
-                  onChange={handleInputChange}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="urgent" className="ml-2 block text-sm text-gray-900">
-                  Mark as urgent
-                </label>
-              </div>
-              <p className="mt-1 text-sm text-gray-500">
+            <View style={styles.checkboxGroup}>
+              <TouchableOpacity
+                style={styles.checkboxItem}
+                onPress={() => handleInputChange('urgent', !formData.urgent)}
+                disabled={isLoading}
+                activeOpacity={0.7}
+              >
+                <View style={[
+                  styles.checkbox,
+                  formData.urgent && styles.checkboxChecked
+                ]}>
+                  {formData.urgent && (
+                    <MaterialIcons name="check" size={16} color="white" />
+                  )}
+                </View>
+                <Text style={styles.checkboxLabel}>Mark as urgent</Text>
+              </TouchableOpacity>
+              <Text style={styles.inputHint}>
                 Urgent orders will be prioritized and highlighted in the system
-              </p>
-            </div>
+              </Text>
+            </View>
 
             {/* Cost */}
-            <div>
-              <Label htmlFor="cost">
-                Estimated Cost *
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>Estimated Cost *</Label>
               <Input
-                type="number"
-                id="cost"
-                name="cost"
                 value={formData.cost}
-                onChange={handleInputChange}
-                required
-                min="0"
-                step="0.01"
+                onChangeText={(value) => handleInputChange('cost', value)}
                 placeholder="0.00"
+                keyboardType="numeric"
+                editable={!isLoading}
               />
-            </div>
+            </View>
 
             {/* Quotation Details */}
-            <div className="sm:col-span-2">
-              <Label htmlFor="quotationDetails">
-                Quotation Details
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>Quotation Details</Label>
               <Input
                 as="textarea"
-                id="quotationDetails"
-                name="quotationDetails"
                 value={formData.quotationDetails}
-                onChange={handleInputChange}
-                rows={3}
+                onChangeText={(value) => handleInputChange('quotationDetails', value)}
                 placeholder="Detailed breakdown of costs, parts, labor, etc..."
+                rows={3}
+                editable={!isLoading}
               />
-            </div>
+            </View>
 
             {/* Comments */}
-            <div className="sm:col-span-2">
-              <Label htmlFor="comments">
-                Comments
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>Comments</Label>
               <Input
                 as="textarea"
-                id="comments"
-                name="comments"
                 value={formData.comments}
-                onChange={handleInputChange}
-                rows={3}
+                onChangeText={(value) => handleInputChange('comments', value)}
                 placeholder="Additional notes or special instructions..."
+                rows={3}
+                editable={!isLoading}
               />
-            </div>
-          </div>
+            </View>
+          </View>
 
           {/* Form Actions */}
-          <div className="mt-6 flex items-center justify-end space-x-3">
-            <Link
-              to="/maintenance-orders"
-              className="btn-secondary"
+          <View style={styles.formActions}>
+            <Button
+              onPress={() => navigation.navigate('MaintenanceOrders')}
+              variant="secondary"
+              style={styles.actionButton}
             >
               Cancel
-            </Link>
+            </Button>
             <Button
-              type="submit"
+              onPress={handleSubmit}
               disabled={isLoading || availableVehicles.length === 0}
               variant="primary"
+              style={styles.actionButton}
             >
               {isLoading ? (
-                <>
-                  <LoadingSpinner size="sm" className="text-white mr-2" />
-                  Creating Order...
-                </>
+                <View style={styles.loadingContent}>
+                  <LoadingSpinner size="sm" color="white" />
+                  <Text style={styles.loadingText}>Creating Order...</Text>
+                </View>
               ) : (
-                <>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Maintenance Order
-                </>
+                <View style={styles.buttonContent}>
+                  <MaterialIcons name="add" size={16} color="white" />
+                  <Text style={styles.buttonText}>Create Maintenance Order</Text>
+                </View>
               )}
             </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+          </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 24,
+  },
+  header: {
+    marginBottom: 24,
+  },
+  headerContent: {
+    gap: 16,
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+  },
+  backButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButtonText: {
+    color: '#6b7280',
+    marginLeft: 4,
+    fontSize: 14,
+  },
+  headerInfo: {
+    gap: 4,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  formContainer: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  formContent: {
+    gap: 24,
+  },
+  inputGroup: {
+    gap: 8,
+  },
+  inputHint: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  errorHint: {
+    fontSize: 12,
+    color: '#ef4444',
+  },
+  checkboxGroup: {
+    gap: 8,
+  },
+  checkboxItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  checkbox: {
+    width: 16,
+    height: 16,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 3,
+    marginRight: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'white',
+  },
+  checkboxChecked: {
+    backgroundColor: '#2563eb',
+    borderColor: '#2563eb',
+  },
+  checkboxLabel: {
+    fontSize: 14,
+    color: '#111827',
+  },
+  formActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 24,
+    gap: 12,
+  },
+  actionButton: {
+    flex: 1,
+  },
+  loadingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    color: 'white',
+    marginLeft: 8,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    marginLeft: 8,
+  },
+});
