@@ -38,6 +38,8 @@ export function useVehicleDetails(vehicleId: string | undefined): UseVehicleDeta
 
   useEffect(() => {
     fetchVehicle();
+  }
+  )
 
   const refreshVehicle = async () => {
     await fetchVehicle();
