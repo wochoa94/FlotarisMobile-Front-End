@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { Driver, DriverQueryParams, PaginatedDriversResponse } from '../../../types';
 import { driverService } from '../../../services/apiService';
 
@@ -35,36 +34,13 @@ interface UseDriversDataReturn {
 }
 
 export function useDriversData(): UseDriversDataReturn {
-  const [searchParams, setSearchParams] = useSearchParams();
-  
-  // Initialize state from URL parameters
-  const getInitialState = () => {
-    const search = searchParams.get('search') || '';
-    const emailSearch = searchParams.get('emailSearch') || '';
-    const sortBy = searchParams.get('sortBy') as SortColumn | null;
-    const sortOrder = (searchParams.get('sortOrder') as SortDirection) || 'asc';
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const limit = parseInt(searchParams.get('limit') || '10', 10);
-    
-    return {
-      search,
-      emailSearch,
-      sortBy,
-      sortOrder,
-      page,
-      limit,
-    };
-  };
-
-  const initialState = getInitialState();
-  
-  // State variables
-  const [searchTerm, setSearchTermState] = useState(initialState.search);
-  const [emailSearchTerm, setEmailSearchTermState] = useState(initialState.emailSearch);
-  const [sortBy, setSortByState] = useState<SortColumn | null>(initialState.sortBy);
-  const [sortOrder, setSortOrderState] = useState<SortDirection>(initialState.sortOrder);
-  const [currentPage, setCurrentPageState] = useState(initialState.page);
-  const [itemsPerPage, setItemsPerPageState] = useState(initialState.limit);
+  // State variables - removed URL parameter initialization for mobile
+  const [searchTerm, setSearchTermState] = useState('');
+  const [emailSearchTerm, setEmailSearchTermState] = useState('');
+  const [sortBy, setSortByState] = useState<SortColumn | null>(null);
+  const [sortOrder, setSortOrderState] = useState<SortDirection>('asc');
+  const [currentPage, setCurrentPageState] = useState(1);
+  const [itemsPerPage, setItemsPerPageState] = useState(10);
   
   // Data state
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -114,20 +90,6 @@ export function useDriversData(): UseDriversDataReturn {
     };
   }, [emailSearchTerm]);
 
-  // Update URL parameters when state changes
-  const updateUrlParams = useCallback(() => {
-    const params = new URLSearchParams();
-    
-    if (debouncedSearchTerm) params.set('search', debouncedSearchTerm);
-    if (debouncedEmailSearchTerm) params.set('emailSearch', debouncedEmailSearchTerm);
-    if (sortBy) params.set('sortBy', sortBy);
-    if (sortOrder !== 'asc') params.set('sortOrder', sortOrder);
-    if (currentPage !== 1) params.set('page', currentPage.toString());
-    if (itemsPerPage !== 10) params.set('limit', itemsPerPage.toString());
-    
-    setSearchParams(params, { replace: true });
-  }, [debouncedSearchTerm, debouncedEmailSearchTerm, sortBy, sortOrder, currentPage, itemsPerPage, setSearchParams]);
-
   // Fetch data function
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -167,11 +129,6 @@ export function useDriversData(): UseDriversDataReturn {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-  // Effect to update URL when state changes
-  useEffect(() => {
-    updateUrlParams();
-  }, [updateUrlParams]);
 
   // Action functions
   const setSearchTerm = useCallback((term: string) => {

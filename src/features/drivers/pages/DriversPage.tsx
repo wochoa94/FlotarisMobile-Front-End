@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Plus, Filter, RotateCcw } from 'lucide-react';
+import { View, Text, StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '../../../hooks/useAuth';
 import { useDriversData } from '../hooks/useDriversData';
 import { driverService } from '../../../services/apiService';
@@ -12,6 +13,7 @@ import { Driver } from '../../../types';
 
 export function DriversPage() {
   const { user } = useAuth();
+  const navigation = useNavigation();
   const [showFilterModal, setShowFilterModal] = useState(false);
   
   const {
@@ -78,69 +80,68 @@ export function DriversPage() {
 
   if (error) {
     return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Drivers</h1>
-            <p className="mt-1 text-sm text-gray-600">Manage your fleet drivers</p>
-          </div>
-        </div>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Drivers</Text>
+          <Text style={styles.headerSubtitle}>Manage your fleet drivers</Text>
+        </View>
         
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="text-red-800">
-              <h3 className="font-medium">Error loading drivers</h3>
-              <p className="text-sm mt-1">{error}</p>
-            </div>
-            <button
-              onClick={refreshData}
-              className="text-red-600 hover:text-red-700 transition-colors duration-200"
-            >
-              <RotateCcw className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-      </div>
+        <View style={styles.errorContainer}>
+          <View style={styles.errorContent}>
+            <Text style={styles.errorTitle}>Error loading drivers</Text>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+          <Button
+            onPress={refreshData}
+            variant="secondary"
+          >
+            <MaterialIcons name="refresh" size={16} color="#ef4444" />
+          </Button>
+        </View>
+      </View>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <View style={styles.container}>
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Drivers</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            Manage your fleet drivers
-          </p>
-        </div>
-        <div className="flex items-center space-x-3">
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>Drivers</Text>
+          <Text style={styles.headerSubtitle}>Manage your fleet drivers</Text>
+        </View>
+        <View style={styles.headerActions}>
           {/* Filter Button */}
           <Button
-            onClick={() => setShowFilterModal(true)}
+            onPress={() => setShowFilterModal(true)}
             variant="secondary"
+            style={styles.filterButton}
           >
-            <Filter className="h-4 w-4 mr-2" />
-            Filters
-            {(searchTerm || emailSearchTerm) && (
-              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                Active
-              </span>
-            )}
+            <View style={styles.filterButtonContent}>
+              <MaterialIcons name="filter-list" size={16} color="#374151" />
+              <Text style={styles.filterButtonText}>Filters</Text>
+              {(searchTerm || emailSearchTerm) && (
+                <View style={styles.activeFilterBadge}>
+                  <Text style={styles.activeFilterText}>Active</Text>
+                </View>
+              )}
+            </View>
           </Button>
           
           {/* Add Driver Button */}
           {user?.isAdmin && (
-            <Link
-              to="/drivers/new"
-              className="btn-primary"
+            <Button
+              onPress={() => navigation.navigate('AddDriver')}
+              variant="primary"
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Driver
-            </Link>
+              <View style={styles.addButtonContent}>
+                <MaterialIcons name="add" size={16} color="white" />
+                <Text style={styles.addButtonText}>Add Driver</Text>
+              </View>
+            </Button>
           )}
-        </div>
-      </div>
+        </View>
+      </View>
 
       {/* Filter Modal */}
       <DriverFilterModal
@@ -183,6 +184,99 @@ export function DriversPage() {
         isDeleting={isDeleting}
         onConfirmDelete={confirmDeleteDriver}
       />
-    </div>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  header: {
+    backgroundColor: 'white',
+    paddingHorizontal: 24,
+    paddingTop: 60, // Account for status bar
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  headerContent: {
+    marginBottom: 16,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+  },
+  filterButton: {
+    flex: 1,
+  },
+  filterButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterButtonText: {
+    fontSize: 14,
+    color: '#374151',
+    marginLeft: 8,
+  },
+  activeFilterBadge: {
+    backgroundColor: '#dbeafe',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  activeFilterText: {
+    fontSize: 10,
+    color: '#1e40af',
+    fontWeight: '500',
+  },
+  addButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  addButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 8,
+  },
+  errorContainer: {
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    borderRadius: 8,
+    padding: 16,
+    margin: 24,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  errorContent: {
+    flex: 1,
+  },
+  errorTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#991b1b',
+    marginBottom: 4,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#991b1b',
+  },
+});

@@ -1,8 +1,10 @@
 import React from 'react';
-import { AlertTriangle, Trash2 } from 'lucide-react';
+import { View, Text, StyleSheet } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { Driver } from '../../../types';
 import { LoadingSpinner } from '../../../components/ui/LoadingSpinner';
 import { Button } from '../../../components/ui/Button';
+import { Modal } from '../../../components/ui/Modal';
 
 interface DeleteDriverConfirmationModalProps {
   isOpen: boolean;
@@ -22,57 +24,117 @@ export function DeleteDriverConfirmationModal({
   if (!isOpen || !driver) return null;
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
-      <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-        <div className="p-6">
-          <div className="flex items-center mb-4">
-            <div className="flex-shrink-0">
-              <AlertTriangle className="h-6 w-6 text-red-600" />
-            </div>
-            <div className="ml-3">
-              <h3 className="text-lg font-medium text-gray-900">Delete Driver</h3>
-            </div>
-          </div>
-          
-          <div className="mb-6">
-            <p className="text-sm text-gray-600 mb-4">
-              <strong>Warning:</strong> This action cannot be undone. Are you sure you want to permanently delete this driver?
-            </p>
-            <div className="bg-gray-50 rounded-md p-3">
-              <p className="text-sm font-medium text-gray-900">{driver.name}</p>
-              <p className="text-sm text-gray-500">{driver.email}</p>
-              <p className="text-sm text-gray-500">ID: {driver.idNumber}</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center justify-end space-x-3">
-            <Button
-              onClick={onClose}
-              disabled={isDeleting}
-              variant="secondary"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={onConfirmDelete}
-              disabled={isDeleting}
-              variant="danger"
-            >
-              {isDeleting ? (
-                <>
-                  <LoadingSpinner size="sm" className="text-white mr-2" />
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Confirm Delete
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      headerContent={
+        <View style={styles.headerContent}>
+          <MaterialIcons name="warning" size={24} color="#ef4444" />
+          <Text style={styles.headerTitle}>Delete Driver</Text>
+        </View>
+      }
+      footerContent={
+        <View style={styles.footerContent}>
+          <Button
+            onPress={onClose}
+            disabled={isDeleting}
+            variant="secondary"
+          >
+            Cancel
+          </Button>
+          <Button
+            onPress={onConfirmDelete}
+            disabled={isDeleting}
+            variant="danger"
+          >
+            {isDeleting ? (
+              <View style={styles.loadingContent}>
+                <LoadingSpinner size="sm" color="white" />
+                <Text style={styles.loadingText}>Deleting...</Text>
+              </View>
+            ) : (
+              <View style={styles.buttonContent}>
+                <MaterialIcons name="delete" size={16} color="white" />
+                <Text style={styles.buttonText}>Confirm Delete</Text>
+              </View>
+            )}
+          </Button>
+        </View>
+      }
+    >
+      <View style={styles.content}>
+        <Text style={styles.warningText}>
+          <Text style={styles.boldText}>Warning:</Text> This action cannot be undone. Are you sure you want to permanently delete this driver?
+        </Text>
+        <View style={styles.driverInfo}>
+          <Text style={styles.driverName}>{driver.name}</Text>
+          <Text style={styles.driverEmail}>{driver.email}</Text>
+          <Text style={styles.driverId}>ID: {driver.idNumber}</Text>
+        </View>
+      </View>
+    </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+    marginLeft: 12,
+  },
+  content: {
+    marginBottom: 24,
+  },
+  warningText: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 16,
+  },
+  boldText: {
+    fontWeight: 'bold',
+  },
+  driverInfo: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 6,
+    padding: 12,
+  },
+  driverName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  driverEmail: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  driverId: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  footerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  loadingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: 'white',
+    marginLeft: 8,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    marginLeft: 8,
+  },
+});

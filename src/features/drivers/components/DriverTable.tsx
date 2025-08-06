@@ -1,9 +1,12 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { Eye, Edit, Plus, User, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Driver, User as UserType } from '../../../types';
 import { LoadingSpinner } from '../../../components/ui/LoadingSpinner';
 import { Button } from '../../../components/ui/Button';
+import { Input } from '../../../components/ui/Input';
+import { Card } from '../../../components/ui/Card';
 
 interface DriverTableProps {
   drivers: Driver[];
@@ -46,14 +49,16 @@ export function DriverTable({
   onClearAllFilters,
   onDeleteDriver,
 }: DriverTableProps) {
+  const navigation = useNavigation();
+
   // Render sort icon
   const renderSortIcon = (column: string) => {
     if (sortBy !== column) {
-      return <ChevronUp className="h-4 w-4 text-gray-300" />;
+      return <MaterialIcons name="keyboard-arrow-up" size={16} color="#d1d5db" />;
     }
     return sortOrder === 'asc' 
-      ? <ChevronUp className="h-4 w-4 text-blue-600" />
-      : <ChevronDown className="h-4 w-4 text-blue-600" />;
+      ? <MaterialIcons name="keyboard-arrow-up" size={16} color="#2563eb" />
+      : <MaterialIcons name="keyboard-arrow-down" size={16} color="#2563eb" />;
   };
 
   // Handle page change
@@ -85,267 +90,346 @@ export function DriverTable({
   };
 
   return (
-    <div className="bg-white shadow rounded-lg">
-      <div className="px-4 py-3 sm:px-6 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <h3 className="text-lg font-medium text-gray-900">
-              Drivers ({totalCount})
-            </h3>
-            {loading && <LoadingSpinner size="sm" />}
-          </div>
+    <Card style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <Text style={styles.headerTitle}>Drivers ({totalCount})</Text>
+          {loading && <LoadingSpinner size="sm" />}
+        </View>
+        
+        <View style={styles.headerRight}>
+          {/* Items per page */}
+          <View style={styles.itemsPerPageContainer}>
+            <Text style={styles.itemsPerPageLabel}>Show:</Text>
+            <Input
+              as="select"
+              selectedValue={itemsPerPage.toString()}
+              onValueChange={(value) => onItemsPerPageChange(Number(value))}
+              style={styles.itemsPerPageSelect}
+            >
+              <Input.Item label="5" value="5" />
+              <Input.Item label="10" value="10" />
+              <Input.Item label="25" value="25" />
+              <Input.Item label="50" value="50" />
+            </Input>
+          </View>
           
-          <div className="flex items-center space-x-4">
-            {/* Items per page */}
-            <div className="flex items-center space-x-2">
-              <label htmlFor="itemsPerPage" className="text-sm text-gray-700">
-                Show:
-              </label>
-              <select
-                id="itemsPerPage"
-                value={itemsPerPage}
-                onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-                className="border border-gray-300 rounded-md text-sm py-1 px-2 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-              </select>
-            </div>
-            
-            {totalCount > 0 && (
-              <div className="text-sm text-gray-500">
-                Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+          {totalCount > 0 && (
+            <Text style={styles.resultsCount}>
+              Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount}
+            </Text>
+          )}
+        </View>
+      </View>
 
-      {/* Drivers Table */}
-      <div className="overflow-x-auto">
+      {/* Drivers List */}
+      <ScrollView style={styles.driversList}>
         {drivers.length > 0 ? (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-200"
-                  onClick={() => onSorting('name')}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Driver Name</span>
-                    {renderSortIcon('name')}
-                  </div>
-                </th>
-                <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-200"
-                  onClick={() => onSorting('email')}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Email Address</span>
-                    {renderSortIcon('email')}
-                  </div>
-                </th>
-                <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-200"
-                  onClick={() => onSorting('idNumber')}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>ID Number</span>
-                    {renderSortIcon('idNumber')}
-                  </div>
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Assigned Vehicle
-                </th>
-                <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-200"
-                  onClick={() => onSorting('createdAt')}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Created</span>
-                    {renderSortIcon('createdAt')}
-                  </div>
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {drivers.map((driver) => (
-                <tr key={driver.id} className="hover:bg-gray-50 transition-colors duration-150">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10">
-                        <div className="bg-purple-100 h-10 w-10 rounded-full flex items-center justify-center">
-                          <User className="h-5 w-5 text-purple-600" />
-                        </div>
-                      </div>
-                      <div className="ml-4">
-                        <Link
-                          to={`/drivers/${driver.id}`}
-                          className="text-sm font-medium text-blue-600 hover:text-blue-900 transition-colors duration-200"
-                        >
-                          {driver.name}
-                        </Link>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {driver.email}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">
-                    {driver.idNumber}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {driver.assignedVehicle ? (
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {driver.assignedVehicle.name}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {driver.assignedVehicle.licensePlate || 'No plate'}
-                        </div>
-                      </div>
-                    ) : (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                        Unassigned
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+          drivers.map((driver) => (
+            <TouchableOpacity
+              key={driver.id}
+              style={styles.driverCard}
+              onPress={() => navigation.navigate('DriverDetail', { id: driver.id })}
+              activeOpacity={0.7}
+            >
+              <View style={styles.driverHeader}>
+                <View style={styles.driverInfo}>
+                  <View style={styles.avatarContainer}>
+                    <MaterialCommunityIcons name="account" size={20} color="#8b5cf6" />
+                  </View>
+                  <View style={styles.driverDetails}>
+                    <Text style={styles.driverName}>{driver.name}</Text>
+                    <Text style={styles.driverEmail}>{driver.email}</Text>
+                  </View>
+                </View>
+                
+                {user?.isAdmin && (
+                  <View style={styles.driverActions}>
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={() => navigation.navigate('DriverDetail', { id: driver.id })}
+                    >
+                      <MaterialIcons name="visibility" size={16} color="#2563eb" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={() => navigation.navigate('EditDriver', { id: driver.id })}
+                    >
+                      <MaterialIcons name="edit" size={16} color="#6b7280" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={() => onDeleteDriver(driver)}
+                    >
+                      <MaterialIcons name="delete" size={16} color="#ef4444" />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+              
+              <View style={styles.driverMetrics}>
+                <View style={styles.metricItem}>
+                  <Text style={styles.metricLabel}>ID Number</Text>
+                  <Text style={styles.metricValue}>{driver.idNumber}</Text>
+                </View>
+                <View style={styles.metricItem}>
+                  <Text style={styles.metricLabel}>Assigned Vehicle</Text>
+                  <Text style={styles.metricValue}>
+                    {driver.assignedVehicle ? driver.assignedVehicle.name : 'Unassigned'}
+                  </Text>
+                </View>
+                <View style={styles.metricItem}>
+                  <Text style={styles.metricLabel}>Created</Text>
+                  <Text style={styles.metricValue}>
                     {new Date(driver.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex justify-end space-x-2">
-                      <Link
-                        to={`/drivers/${driver.id}`}
-                        className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded transition-colors duration-200"
-                        title="View Details"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Link>
-                      {user?.isAdmin && (
-                        <>
-                          <Link
-                            to={`/drivers/${driver.id}/edit`}
-                            className="text-gray-600 hover:text-gray-900 p-1 hover:bg-gray-50 rounded transition-colors duration-200"
-                            title="Edit Driver"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Link>
-                          <button
-                            onClick={() => onDeleteDriver(driver)}
-                            className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded transition-colors duration-200"
-                            title="Delete Driver"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))
         ) : (
-          <div className="text-center py-12">
-            <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <div className="text-gray-500 mb-4">
+          <View style={styles.emptyState}>
+            <MaterialCommunityIcons name="account" size={48} color="#9ca3af" />
+            <Text style={styles.emptyStateText}>
               {loading ? 'Loading drivers...' : 
                (searchTerm || emailSearchTerm) ? 
                'No drivers match your search' : 'No drivers found'}
-            </div>
+            </Text>
             {!loading && (searchTerm || emailSearchTerm) && (
-              <button
-                onClick={onClearAllFilters}
-                className="text-blue-600 hover:text-blue-700 transition-colors duration-200"
+              <Button
+                onPress={onClearAllFilters}
+                variant="secondary"
               >
                 Clear search filters
-              </button>
+              </Button>
             )}
             {!loading && !searchTerm && !emailSearchTerm && user?.isAdmin && (
-              <Link
-                to="/drivers/new"
-                className="btn-primary"
+              <Button
+                onPress={() => navigation.navigate('AddDriver')}
+                variant="primary"
               >
-                <Plus className="h-4 w-4 mr-2" />
-                Add First Driver
-              </Link>
+                <View style={styles.buttonContent}>
+                  <MaterialIcons name="add" size={16} color="white" />
+                  <Text style={styles.addButtonText}>Add First Driver</Text>
+                </View>
+              </Button>
             )}
-          </div>
+          </View>
         )}
-      </div>
+      </ScrollView>
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-          <div className="flex-1 flex justify-between sm:hidden">
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={!hasPreviousPage || loading}
-              className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+        <View style={styles.pagination}>
+          <TouchableOpacity
+            style={[styles.paginationButton, (!hasPreviousPage || loading) && styles.disabledButton]}
+            onPress={() => handlePageChange(currentPage - 1)}
+            disabled={!hasPreviousPage || loading}
+          >
+            <MaterialIcons name="chevron-left" size={20} color={(!hasPreviousPage || loading) ? "#9ca3af" : "#374151"} />
+            <Text style={[styles.paginationButtonText, (!hasPreviousPage || loading) && styles.disabledText]}>
               Previous
-            </button>
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={!hasNextPage || loading}
-              className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            </Text>
+          </TouchableOpacity>
+          
+          <View style={styles.pageInfo}>
+            <Text style={styles.pageText}>
+              Page {currentPage} of {totalPages}
+            </Text>
+          </View>
+          
+          <TouchableOpacity
+            style={[styles.paginationButton, (!hasNextPage || loading) && styles.disabledButton]}
+            onPress={() => handlePageChange(currentPage + 1)}
+            disabled={!hasNextPage || loading}
+          >
+            <Text style={[styles.paginationButtonText, (!hasNextPage || loading) && styles.disabledText]}>
               Next
-            </button>
-          </div>
-          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm text-gray-700">
-                Showing <span className="font-medium">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
-                <span className="font-medium">{Math.min(currentPage * itemsPerPage, totalCount)}</span> of{' '}
-                <span className="font-medium">{totalCount}</span> results
-              </p>
-            </div>
-            <div>
-              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={!hasPreviousPage || loading}
-                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span className="sr-only">Previous</span>
-                  <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-                </button>
-                
-                {getPageNumbers().map((pageNumber) => (
-                  <button
-                    key={pageNumber}
-                    onClick={() => handlePageChange(pageNumber)}
-                    disabled={loading}
-                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                      currentPage === pageNumber
-                        ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
-                  >
-                    {pageNumber}
-                  </button>
-                ))}
-                
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={!hasNextPage || loading}
-                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span className="sr-only">Next</span>
-                  <ChevronRight className="h-5 w-5" aria-hidden="true" />
-                </button>
-              </nav>
-            </div>
-          </div>
-        </div>
+            </Text>
+            <MaterialIcons name="chevron-right" size={20} color={(!hasNextPage || loading) ? "#9ca3af" : "#374151"} />
+          </TouchableOpacity>
+        </View>
       )}
-    </div>
+    </Card>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  itemsPerPageContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  itemsPerPageLabel: {
+    fontSize: 14,
+    color: '#374151',
+  },
+  itemsPerPageSelect: {
+    minWidth: 60,
+  },
+  resultsCount: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  driversList: {
+    flex: 1,
+    padding: 16,
+  },
+  driverCard: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  driverHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  driverInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  avatarContainer: {
+    width: 40,
+    height: 40,
+    backgroundColor: '#f3e8ff',
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  driverDetails: {
+    flex: 1,
+  },
+  driverName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  driverEmail: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  driverActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: '#f9fafb',
+  },
+  driverMetrics: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  metricItem: {
+    minWidth: '30%',
+  },
+  metricLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 2,
+  },
+  metricValue: {
+    fontSize: 14,
+    color: '#111827',
+    fontWeight: '500',
+  },
+  emptyState: {
+    alignItems: 'center',
+    padding: 48,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    margin: 24,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginVertical: 16,
+    textAlign: 'center',
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  addButtonText: {
+    color: 'white',
+    marginLeft: 8,
+  },
+  pagination: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  paginationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 6,
+    backgroundColor: 'white',
+  },
+  paginationButtonText: {
+    fontSize: 14,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  disabledText: {
+    color: '#9ca3af',
+  },
+  pageInfo: {
+    alignItems: 'center',
+  },
+  pageText: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+});

@@ -1,38 +1,42 @@
 import React from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit, User, Mail, MapPin, Calendar, Truck, Clock } from 'lucide-react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFleetData } from '../../../hooks/useFleetData';
 import { useAuth } from '../../../hooks/useAuth';
 import { LoadingSpinner } from '../../../components/ui/LoadingSpinner';
 import { formatTooltipDate, getDaysBetweenDates, parseDate, parseDateEnd } from '../../../utils/dateUtils';
 import { formatDate } from '../../../utils/dateUtils';
 import { Badge } from '../../../components/ui/Badge';
+import { Button } from '../../../components/ui/Button';
+import { Card, CardBody } from '../../../components/ui/Card';
 
 export function DriverDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const route = useRoute();
+  const navigation = useNavigation();
+  const { id } = route.params as { id: string };
   const { data, loading, error } = useFleetData();
   const { user } = useAuth();
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <View style={styles.centerContainer}>
         <LoadingSpinner size="lg" />
-      </div>
+      </View>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-12">
-        <div className="text-red-600 mb-4">{error}</div>
-        <button 
-          onClick={() => window.location.reload()} 
-          className="text-blue-600 hover:text-blue-700"
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <Button 
+          onPress={() => navigation.goBack()}
+          variant="primary"
         >
           Try again
-        </button>
-      </div>
+        </Button>
+      </View>
     );
   }
 
@@ -68,280 +72,527 @@ export function DriverDetailPage() {
 
   if (!driver) {
     return (
-      <div className="text-center py-12">
-        <div className="text-gray-500 mb-4">Driver not found</div>
-        <button 
-          onClick={() => navigate('/drivers')} 
-          className="text-blue-600 hover:text-blue-700"
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorText}>Driver not found</Text>
+        <Button 
+          onPress={() => navigation.navigate('Drivers')}
+          variant="primary"
         >
           Back to drivers
-        </button>
-      </div>
+        </Button>
+      </View>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={() => navigate('/drivers')}
-            className="inline-flex items-center text-gray-500 hover:text-gray-700 transition-colors duration-200"
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <Button
+            onPress={() => navigation.navigate('Drivers')}
+            variant="secondary"
+            style={styles.backButton}
           >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back to Drivers
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{driver.name}</h1>
-            <p className="text-sm text-gray-600">{driver.email}</p>
-          </div>
-        </div>
+            <View style={styles.backButtonContent}>
+              <MaterialIcons name="arrow-back" size={16} color="#6b7280" />
+              <Text style={styles.backButtonText}>Back to Drivers</Text>
+            </View>
+          </Button>
+          <View style={styles.headerInfo}>
+            <Text style={styles.headerTitle}>{driver.name}</Text>
+            <Text style={styles.headerSubtitle}>{driver.email}</Text>
+          </View>
+        </View>
         {user?.isAdmin && (
-          <Link
-            to={`/drivers/${driver.id}/edit`}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+          <Button
+            onPress={() => navigation.navigate('EditDriver', { id: driver.id })}
+            variant="primary"
           >
-            <Edit className="h-4 w-4 mr-2" />
-            Edit Driver
-          </Link>
+            <View style={styles.buttonContent}>
+              <MaterialIcons name="edit" size={16} color="white" />
+              <Text style={styles.buttonText}>Edit Driver</Text>
+            </View>
+          </Button>
         )}
-      </div>
+      </View>
 
       {/* Driver Profile Card */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <div className="flex items-center space-x-6">
-            <div className="flex-shrink-0">
-              <div className="bg-purple-100 h-20 w-20 rounded-full flex items-center justify-center">
-                <User className="h-10 w-10 text-purple-600" />
-              </div>
-            </div>
-            <div className="flex-1">
-              <h2 className="text-2xl font-bold text-gray-900">{driver.name}</h2>
-              <div className="mt-2 space-y-1">
-                <div className="flex items-center text-sm text-gray-600">
-                  <Mail className="h-4 w-4 mr-2" />
-                  {driver.email}
-                </div>
+      <Card style={styles.profileCard}>
+        <CardBody>
+          <View style={styles.profileContent}>
+            <View style={styles.avatarContainer}>
+              <MaterialCommunityIcons name="account" size={40} color="#8b5cf6" />
+            </View>
+            <View style={styles.profileInfo}>
+              <Text style={styles.profileName}>{driver.name}</Text>
+              <View style={styles.profileDetails}>
+                <View style={styles.profileDetailItem}>
+                  <MaterialIcons name="email" size={16} color="#6b7280" />
+                  <Text style={styles.profileDetailText}>{driver.email}</Text>
+                </View>
                 {driver.address && (
-                  <div className="flex items-center text-sm text-gray-600">
-                    <MapPin className="h-4 w-4 mr-2" />
-                    {driver.address}
-                  </div>
+                  <View style={styles.profileDetailItem}>
+                    <MaterialIcons name="location-on" size={16} color="#6b7280" />
+                    <Text style={styles.profileDetailText}>{driver.address}</Text>
+                  </View>
                 )}
-                <div className="flex items-center text-sm text-gray-600">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Driver since {formatDate(driver.createdAt)}
-                </div>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-3xl font-bold text-blue-600">{driver.assignedVehicle ? 1 : 0}</div>
-              <div className="text-sm text-gray-500">Assigned Vehicle</div>
-            </div>
-          </div>
-        </div>
-      </div>
+                <View style={styles.profileDetailItem}>
+                  <MaterialIcons name="event" size={16} color="#6b7280" />
+                  <Text style={styles.profileDetailText}>
+                    Driver since {formatDate(driver.createdAt)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+            <View style={styles.profileStats}>
+              <Text style={styles.statsNumber}>{driver.assignedVehicle ? 1 : 0}</Text>
+              <Text style={styles.statsLabel}>Assigned Vehicle</Text>
+            </View>
+          </View>
+        </CardBody>
+      </Card>
 
-      {/* Driver Information */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-              Personal Information
-            </h3>
-            <dl className="grid grid-cols-1 gap-4">
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Driver ID</dt>
-                <dd className="mt-1 text-sm text-gray-900 font-mono">{driver.id}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">ID Number</dt>
-                <dd className="mt-1 text-sm text-gray-900 font-mono">{driver.idNumber}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Age</dt>
-                <dd className="mt-1 text-sm text-gray-900">{driver.age || 'Not specified'}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Email Address</dt>
-                <dd className="mt-1 text-sm text-gray-900">{driver.email}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Full Address</dt>
-                <dd className="mt-1 text-sm text-gray-900">{driver.address || 'Not specified'}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Created</dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  {formatDate(driver.createdAt)}
-                </dd>
-              </div>
-            </dl>
-          </div>
-        </div>
+      {/* Driver Information Grid */}
+      <View style={styles.infoGrid}>
+        {/* Personal Information */}
+        <Card style={styles.infoCard}>
+          <CardBody>
+            <Text style={styles.sectionTitle}>Personal Information</Text>
+            <View style={styles.infoList}>
+              <View style={styles.infoItem}>
+                <Text style={styles.infoLabel}>Driver ID</Text>
+                <Text style={styles.infoValue}>{driver.id}</Text>
+              </View>
+              <View style={styles.infoItem}>
+                <Text style={styles.infoLabel}>ID Number</Text>
+                <Text style={styles.infoValue}>{driver.idNumber}</Text>
+              </View>
+              <View style={styles.infoItem}>
+                <Text style={styles.infoLabel}>Age</Text>
+                <Text style={styles.infoValue}>{driver.age || 'Not specified'}</Text>
+              </View>
+              <View style={styles.infoItem}>
+                <Text style={styles.infoLabel}>Email Address</Text>
+                <Text style={styles.infoValue}>{driver.email}</Text>
+              </View>
+              <View style={styles.infoItem}>
+                <Text style={styles.infoLabel}>Full Address</Text>
+                <Text style={styles.infoValue}>{driver.address || 'Not specified'}</Text>
+              </View>
+              <View style={styles.infoItem}>
+                <Text style={styles.infoLabel}>Created</Text>
+                <Text style={styles.infoValue}>{formatDate(driver.createdAt)}</Text>
+              </View>
+            </View>
+          </CardBody>
+        </Card>
 
         {/* Driver Statistics */}
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-              Driver Statistics
-            </h3>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-900">Assigned Vehicle</span>
-                <span className="text-sm text-gray-500">{driver.assignedVehicle ? 1 : 0}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-900">Total Schedules</span>
-                <span className="text-sm text-gray-500">{driverSchedules.length}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-900">Active Schedules</span>
-                <span className="text-sm text-gray-500">
+        <Card style={styles.infoCard}>
+          <CardBody>
+            <Text style={styles.sectionTitle}>Driver Statistics</Text>
+            <View style={styles.statsList}>
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>Assigned Vehicle</Text>
+                <Text style={styles.statValue}>{driver.assignedVehicle ? 1 : 0}</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>Total Schedules</Text>
+                <Text style={styles.statValue}>{driverSchedules.length}</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>Active Schedules</Text>
+                <Text style={styles.statValue}>
                   {driverSchedules.filter(s => s.status === 'active').length}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-900">Vehicle Mileage</span>
-                <span className="text-sm text-gray-500">
+                </Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statLabel}>Vehicle Mileage</Text>
+                <Text style={styles.statValue}>
                   {driver.assignedVehicle?.mileage?.toLocaleString() || '0'} miles
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+                </Text>
+              </View>
+            </View>
+          </CardBody>
+        </Card>
+      </View>
 
       {/* Assignment History */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-            <Clock className="h-5 w-5 inline mr-2" />
-            Assignment History ({sortedSchedules.length})
-          </h3>
+      <Card style={styles.historyCard}>
+        <CardBody>
+          <View style={styles.historyHeader}>
+            <MaterialIcons name="schedule" size={20} color="#6b7280" />
+            <Text style={styles.historyTitle}>
+              Assignment History ({sortedSchedules.length})
+            </Text>
+          </View>
           
           {sortedSchedules.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Vehicle
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Start Date
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      End Date
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Duration
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Notes
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {sortedSchedules.map((schedule) => (
-                    <tr key={schedule.id} className="hover:bg-gray-50 transition-colors duration-150">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {getVehicleName(schedule.vehicleId)}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {getVehicleDetails(schedule.vehicleId)}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatTooltipDate(schedule.startDate)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatTooltipDate(schedule.endDate)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {getScheduleDuration(schedule.startDate, schedule.endDate)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge 
-                          type={schedule.status === 'active' ? 'green' : schedule.status === 'scheduled' ? 'blue' : 'gray'} 
-                          label={schedule.status === 'active' ? 'Active' : schedule.status === 'scheduled' ? 'Scheduled' : 'Completed'} 
-                        />
-                      </td>
-                      <td className="px-6 py-4">
-                        {schedule.notes ? (
-                          <div className="text-sm text-gray-900 max-w-xs truncate" title={schedule.notes}>
-                            {schedule.notes}
-                          </div>
-                        ) : (
-                          <span className="text-sm text-gray-400 italic">No notes</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <View style={styles.historyList}>
+              {sortedSchedules.map((schedule) => (
+                <View key={schedule.id} style={styles.historyItem}>
+                  <View style={styles.historyItemHeader}>
+                    <Text style={styles.vehicleName}>
+                      {getVehicleName(schedule.vehicleId)}
+                    </Text>
+                    <Badge 
+                      type={schedule.status === 'active' ? 'green' : schedule.status === 'scheduled' ? 'blue' : 'gray'} 
+                      label={schedule.status === 'active' ? 'Active' : schedule.status === 'scheduled' ? 'Scheduled' : 'Completed'} 
+                    />
+                  </View>
+                  <Text style={styles.vehicleDetails}>
+                    {getVehicleDetails(schedule.vehicleId)}
+                  </Text>
+                  <View style={styles.scheduleDetails}>
+                    <Text style={styles.scheduleDate}>
+                      {formatTooltipDate(schedule.startDate)} - {formatTooltipDate(schedule.endDate)}
+                    </Text>
+                    <Text style={styles.scheduleDuration}>
+                      Duration: {getScheduleDuration(schedule.startDate, schedule.endDate)}
+                    </Text>
+                  </View>
+                  {schedule.notes && (
+                    <Text style={styles.scheduleNotes} numberOfLines={2}>
+                      Notes: {schedule.notes}
+                    </Text>
+                  )}
+                </View>
+              ))}
+            </View>
           ) : (
-            <div className="text-center py-8">
-              <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">No assignment history found for this driver</p>
-            </div>
+            <View style={styles.emptyHistory}>
+              <MaterialIcons name="schedule" size={48} color="#9ca3af" />
+              <Text style={styles.emptyHistoryText}>
+                No assignment history found for this driver
+              </Text>
+            </View>
           )}
-        </div>
-      </div>
+        </CardBody>
+      </Card>
 
       {/* Currently Assigned Vehicle */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-            <Truck className="h-5 w-5 inline mr-2" />
-            Currently Assigned Vehicle
-          </h3>
+      <Card style={styles.assignedVehicleCard}>
+        <CardBody>
+          <View style={styles.assignedVehicleHeader}>
+            <MaterialCommunityIcons name="truck" size={20} color="#6b7280" />
+            <Text style={styles.assignedVehicleTitle}>Currently Assigned Vehicle</Text>
+          </View>
           
           {driver.assignedVehicle ? (
-            <div className="bg-blue-50 rounded-lg p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="bg-blue-100 p-3 rounded-full">
-                    <Truck className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <h4 className="text-lg font-medium text-gray-900">{driver.assignedVehicle.name}</h4>
-                    <p className="text-sm text-gray-600">
-                      {driver.assignedVehicle.make} {driver.assignedVehicle.model} {driver.assignedVehicle.year}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      License: {driver.assignedVehicle.licensePlate || 'Not specified'}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Mileage: {driver.assignedVehicle.mileage?.toLocaleString() || 'N/A'} miles
-                    </p>
-                  </div>
-                </div>
-                <Link
-                  to={`/vehicles/${driver.assignedVehicle.id}`}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  View Vehicle Details
-                </Link>
-              </div>
-            </div>
+            <View style={styles.assignedVehicleContent}>
+              <View style={styles.assignedVehicleInfo}>
+                <View style={styles.vehicleIconContainer}>
+                  <MaterialCommunityIcons name="truck" size={24} color="#2563eb" />
+                </View>
+                <View style={styles.vehicleInfo}>
+                  <Text style={styles.assignedVehicleName}>{driver.assignedVehicle.name}</Text>
+                  <Text style={styles.assignedVehicleDetails}>
+                    {driver.assignedVehicle.make} {driver.assignedVehicle.model} {driver.assignedVehicle.year}
+                  </Text>
+                  <Text style={styles.assignedVehicleDetails}>
+                    License: {driver.assignedVehicle.licensePlate || 'Not specified'}
+                  </Text>
+                  <Text style={styles.assignedVehicleDetails}>
+                    Mileage: {driver.assignedVehicle.mileage?.toLocaleString() || 'N/A'} miles
+                  </Text>
+                </View>
+              </View>
+              <Button
+                onPress={() => navigation.navigate('VehicleDetail', { id: driver.assignedVehicle.id })}
+                variant="primary"
+              >
+                View Vehicle Details
+              </Button>
+            </View>
           ) : (
-            <div className="text-center py-8">
-              <Truck className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">No vehicle currently assigned to this driver</p>
-            </div>
+            <View style={styles.emptyAssignedVehicle}>
+              <MaterialCommunityIcons name="truck" size={48} color="#9ca3af" />
+              <Text style={styles.emptyAssignedVehicleText}>
+                No vehicle currently assigned to this driver
+              </Text>
+            </View>
           )}
-        </div>
-      </div>
-    </div>
+        </CardBody>
+      </Card>
+    </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  scrollContent: {
+    padding: 24,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#ef4444',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 24,
+  },
+  headerLeft: {
+    flex: 1,
+    gap: 16,
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+  },
+  backButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButtonText: {
+    color: '#6b7280',
+    marginLeft: 4,
+  },
+  headerInfo: {
+    gap: 4,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    marginLeft: 8,
+  },
+  profileCard: {
+    marginBottom: 24,
+  },
+  profileContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 24,
+  },
+  avatarContainer: {
+    width: 80,
+    height: 80,
+    backgroundColor: '#f3e8ff',
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  profileName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  profileDetails: {
+    gap: 4,
+  },
+  profileDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  profileDetailText: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginLeft: 8,
+  },
+  profileStats: {
+    alignItems: 'center',
+  },
+  statsNumber: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#2563eb',
+  },
+  statsLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  infoGrid: {
+    gap: 24,
+    marginBottom: 24,
+  },
+  infoCard: {
+    marginBottom: 0,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+    marginBottom: 16,
+  },
+  infoList: {
+    gap: 16,
+  },
+  infoItem: {
+    gap: 4,
+  },
+  infoLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#111827',
+  },
+  statsList: {
+    gap: 16,
+  },
+  statItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  statLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  statValue: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  historyCard: {
+    marginBottom: 24,
+  },
+  historyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  historyTitle: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+    marginLeft: 8,
+  },
+  historyList: {
+    gap: 16,
+  },
+  historyItem: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 8,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  historyItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  vehicleName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  vehicleDetails: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 8,
+  },
+  scheduleDetails: {
+    gap: 4,
+    marginBottom: 8,
+  },
+  scheduleDate: {
+    fontSize: 14,
+    color: '#111827',
+  },
+  scheduleDuration: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  scheduleNotes: {
+    fontSize: 14,
+    color: '#111827',
+    fontStyle: 'italic',
+  },
+  emptyHistory: {
+    alignItems: 'center',
+    padding: 32,
+  },
+  emptyHistoryText: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  assignedVehicleCard: {
+    marginBottom: 24,
+  },
+  assignedVehicleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  assignedVehicleTitle: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+    marginLeft: 8,
+  },
+  assignedVehicleContent: {
+    gap: 16,
+  },
+  assignedVehicleInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  vehicleIconContainer: {
+    width: 48,
+    height: 48,
+    backgroundColor: '#dbeafe',
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vehicleInfo: {
+    flex: 1,
+  },
+  assignedVehicleName: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  assignedVehicleDetails: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 2,
+  },
+  emptyAssignedVehicle: {
+    alignItems: 'center',
+    padding: 32,
+  },
+  emptyAssignedVehicleText: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+});

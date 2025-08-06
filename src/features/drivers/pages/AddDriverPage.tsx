@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Plus, X, AlertCircle, CheckCircle, User } from 'lucide-react';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../../../hooks/useAuth';
 import { useFleetData } from '../../../hooks/useFleetData';
 import { driverService } from '../../../services/apiService';
@@ -19,7 +20,7 @@ interface DriverFormData {
 }
 
 export function AddDriverPage() {
-  const navigate = useNavigate();
+  const navigation = useNavigation();
   const { user } = useAuth();
   const { refreshData } = useFleetData();
   
@@ -46,8 +47,7 @@ export function AddDriverPage() {
     }
   }, [successMessage, errorMessage]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+  const handleInputChange = (name: string, value: string) => {
     setFormData(prev => ({
       ...prev,
       [name]: value,
@@ -92,9 +92,7 @@ export function AddDriverPage() {
     return null;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleSubmit = async () => {
     // Clear previous messages
     setSuccessMessage('');
     setErrorMessage('');
@@ -138,7 +136,7 @@ export function AddDriverPage() {
       
       // Redirect to drivers page after a short delay
       setTimeout(() => {
-        navigate('/drivers');
+        navigation.navigate('Drivers');
       }, 1500);
 
     } catch (error) {
@@ -164,207 +162,319 @@ export function AddDriverPage() {
   // Only allow admin users to access this page
   if (!user?.isAdmin) {
     return (
-      <div className="text-center py-12">
-        <div className="text-red-600 mb-4">Access denied. Admin privileges required.</div>
-        <Link to="/drivers" className="text-blue-600 hover:text-blue-700">
+      <View style={styles.accessDeniedContainer}>
+        <Text style={styles.accessDeniedText}>Access denied. Admin privileges required.</Text>
+        <Button onPress={() => navigation.navigate('Drivers')} variant="primary">
           Back to Drivers
-        </Link>
-      </div>
+        </Button>
+      </View>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Link
-            to="/drivers"
-            className="inline-flex items-center text-gray-500 hover:text-gray-700 transition-colors duration-200"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back to Drivers
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Add New Driver</h1>
-            <p className="text-sm text-gray-600">
-              Create a new driver profile for your fleet
-            </p>
-          </div>
-        </div>
-      </div>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <Button
+              onPress={() => navigation.navigate('Drivers')}
+              variant="secondary"
+              style={styles.backButton}
+            >
+              <View style={styles.backButtonContent}>
+                <MaterialIcons name="arrow-back" size={16} color="#6b7280" />
+                <Text style={styles.backButtonText}>Back to Drivers</Text>
+              </View>
+            </Button>
+            <View style={styles.headerInfo}>
+              <Text style={styles.headerTitle}>Add New Driver</Text>
+              <Text style={styles.headerSubtitle}>
+                Create a new driver profile for your fleet
+              </Text>
+            </View>
+          </View>
+        </View>
 
-      {/* Success Message */}
-      {successMessage && (
-        <Alert
-          type="success"
-          message={successMessage}
-          onDismiss={() => dismissMessage('success')}
-        />
-      )}
+        {/* Success Message */}
+        {successMessage && (
+          <Alert
+            type="success"
+            message={successMessage}
+            onDismiss={() => dismissMessage('success')}
+          />
+        )}
 
-      {/* Error Message */}
-      {errorMessage && (
-        <Alert
-          type="error"
-          message={errorMessage}
-          onDismiss={() => dismissMessage('error')}
-        />
-      )}
+        {/* Error Message */}
+        {errorMessage && (
+          <Alert
+            type="error"
+            message={errorMessage}
+            onDismiss={() => dismissMessage('error')}
+          />
+        )}
 
-      {/* Form */}
-      <div className="bg-white shadow rounded-lg">
-        <form onSubmit={handleSubmit} className="px-4 py-5 sm:p-6">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        {/* Form */}
+        <View style={styles.formContainer}>
+          <View style={styles.formContent}>
             {/* Driver Name */}
-            <div className="sm:col-span-2">
-              <Label htmlFor="name">
-                Full Name *
-              </Label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-4 w-4 text-gray-400" />
-                </div>
+            <View style={styles.inputGroup}>
+              <Label>Full Name *</Label>
+              <View style={styles.inputWrapper}>
+                <View style={styles.inputIcon}>
+                  <MaterialCommunityIcons name="account" size={16} color="#9ca3af" />
+                </View>
                 <Input
-                  type="text"
-                  id="name"
-                  name="name"
                   value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                  className="pl-10"
+                  onChangeText={(value) => handleInputChange('name', value)}
                   placeholder="Enter driver's full name"
+                  style={styles.inputWithIcon}
                 />
-              </div>
-            </div>
+              </View>
+            </View>
 
             {/* Email */}
-            <div>
-              <Label htmlFor="email">
-                Email Address *
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>Email Address *</Label>
               <Input
-                type="email"
-                id="email"
-                name="email"
                 value={formData.email}
-                onChange={handleInputChange}
-                required
+                onChangeText={(value) => handleInputChange('email', value)}
                 placeholder="driver@example.com"
+                keyboardType="email-address"
+                autoCapitalize="none"
               />
-              <p className="mt-1 text-xs text-gray-500">
+              <Text style={styles.inputHint}>
                 Must be unique across the system
-              </p>
-            </div>
+              </Text>
+            </View>
 
             {/* Age */}
-            <div>
-              <Label htmlFor="age">
-                Age *
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>Age *</Label>
               <Input
-                type="number"
-                id="age"
-                name="age"
                 value={formData.age}
-                onChange={handleInputChange}
-                required
-                min="18"
-                max="100"
+                onChangeText={(value) => handleInputChange('age', value)}
                 placeholder="25"
+                keyboardType="numeric"
               />
-              <p className="mt-1 text-xs text-gray-500">
+              <Text style={styles.inputHint}>
                 Must be between 18 and 100 years
-              </p>
-            </div>
+              </Text>
+            </View>
 
             {/* ID Number */}
-            <div>
-              <Label htmlFor="idNumber">
-                ID Number *
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>ID Number *</Label>
               <Input
-                type="text"
-                id="idNumber"
-                name="idNumber"
                 value={formData.idNumber}
-                onChange={handleInputChange}
-                required
-                maxLength={20}
-                className="font-mono"
+                onChangeText={(value) => handleInputChange('idNumber', value)}
                 placeholder="ABC123456"
+                maxLength={20}
+                autoCapitalize="characters"
               />
-              <p className="mt-1 text-xs text-gray-500">
+              <Text style={styles.inputHint}>
                 6-20 alphanumeric characters (license number, employee ID, etc.)
-              </p>
-            </div>
+              </Text>
+            </View>
 
             {/* Address */}
-            <div className="sm:col-span-2">
-              <Label htmlFor="address">
-                Address *
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>Address *</Label>
               <Input
                 as="textarea"
-                id="address"
-                name="address"
                 value={formData.address}
-                onChange={handleInputChange}
-                required
-                rows={3}
+                onChangeText={(value) => handleInputChange('address', value)}
                 placeholder="Enter complete address including city, state, and postal code"
+                rows={3}
               />
-            </div>
-          </div>
+            </View>
+          </View>
 
           {/* Information Notice */}
-          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-md p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <AlertCircle className="h-5 w-5 text-blue-400" />
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-blue-800">Driver Profile Information</h3>
-                <div className="mt-2 text-sm text-blue-700">
-                  <ul className="list-disc list-inside space-y-1">
-                    <li>This creates a driver profile only (no user account)</li>
-                    <li>The driver will not have system login access</li>
-                    <li>Email must be unique across all drivers</li>
-                    <li>All fields marked with * are required</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
+          <View style={styles.infoNotice}>
+            <View style={styles.infoHeader}>
+              <MaterialIcons name="info" size={20} color="#3b82f6" />
+              <Text style={styles.infoTitle}>Driver Profile Information</Text>
+            </View>
+            <View style={styles.infoContent}>
+              <Text style={styles.infoItem}>• This creates a driver profile only (no user account)</Text>
+              <Text style={styles.infoItem}>• The driver will not have system login access</Text>
+              <Text style={styles.infoItem}>• Email must be unique across all drivers</Text>
+              <Text style={styles.infoItem}>• All fields marked with * are required</Text>
+            </View>
+          </View>
 
           {/* Form Actions */}
-          <div className="mt-6 flex items-center justify-end space-x-3">
-            <Link
-              to="/drivers"
-              className="btn-secondary"
+          <View style={styles.formActions}>
+            <Button
+              onPress={() => navigation.navigate('Drivers')}
+              variant="secondary"
+              style={styles.actionButton}
             >
               Cancel
-            </Link>
+            </Button>
             <Button
-              type="submit"
+              onPress={handleSubmit}
               disabled={isLoading}
               variant="primary"
+              style={styles.actionButton}
             >
               {isLoading ? (
-                <>
-                  <LoadingSpinner size="sm" className="text-white mr-2" />
-                  Adding Driver...
-                </>
+                <View style={styles.loadingContent}>
+                  <LoadingSpinner size="sm" color="white" />
+                  <Text style={styles.loadingText}>Adding Driver...</Text>
+                </View>
               ) : (
-                <>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Driver
-                </>
+                <View style={styles.buttonContent}>
+                  <MaterialIcons name="add" size={16} color="white" />
+                  <Text style={styles.buttonText}>Add Driver</Text>
+                </View>
               )}
             </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+          </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 24,
+  },
+  accessDeniedContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  accessDeniedText: {
+    fontSize: 16,
+    color: '#ef4444',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  header: {
+    marginBottom: 24,
+  },
+  headerContent: {
+    gap: 16,
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+  },
+  backButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButtonText: {
+    color: '#6b7280',
+    marginLeft: 4,
+  },
+  headerInfo: {
+    gap: 4,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  formContainer: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  formContent: {
+    gap: 24,
+  },
+  inputGroup: {
+    gap: 8,
+  },
+  inputWrapper: {
+    position: 'relative',
+  },
+  inputIcon: {
+    position: 'absolute',
+    left: 12,
+    top: 12,
+    zIndex: 1,
+  },
+  inputWithIcon: {
+    paddingLeft: 40,
+  },
+  inputHint: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  infoNotice: {
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    borderRadius: 6,
+    padding: 16,
+    marginTop: 24,
+  },
+  infoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  infoTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1e40af',
+    marginLeft: 12,
+  },
+  infoContent: {
+    gap: 4,
+  },
+  infoItem: {
+    fontSize: 14,
+    color: '#1e40af',
+  },
+  formActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 24,
+    gap: 12,
+  },
+  actionButton: {
+    flex: 1,
+  },
+  loadingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: 'white',
+    marginLeft: 8,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    marginLeft: 8,
+  },
+});
