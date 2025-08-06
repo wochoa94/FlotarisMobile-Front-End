@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { GanttItem, GanttVehicle } from '../../../types';
+import { Modal } from '../../../components/ui/Modal';
 import { 
   addDaysToDate, 
   getDaysBetweenDates, 
@@ -107,7 +108,6 @@ export function GanttChart({
         }, 100);
       }
     }
-  }, [startDate]);
 
   return (
     <View style={styles.container}>

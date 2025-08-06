@@ -13,7 +13,7 @@ export function Logo({ style }: LogoProps) {
   // Handle both local assets and remote URLs
   const imageSource = typeof logoUrl === 'string' && logoUrl.startsWith('http') 
     ? { uri: logoUrl }
-    : require('../../assets/vite.svg'); // Fallback to local asset
+    : require('../../../assets/vite.svg'); // Fallback to local asset
 
   return (
     <Image 

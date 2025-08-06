@@ -93,7 +93,7 @@ export function Navigation() {
             </Text>
             {user?.isAdmin && (
               <Text style={styles.adminBadge}>Admin</Text>
-            )}
+          <Image source={require('../../../assets/vite.svg')} style={styles.logo} />
           </View>
         </View>
 

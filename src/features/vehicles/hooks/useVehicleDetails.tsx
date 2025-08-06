@@ -38,7 +38,6 @@ export function useVehicleDetails(vehicleId: string | undefined): UseVehicleDeta
 
   useEffect(() => {
     fetchVehicle();
-  }, [fetchVehicle]); // Re-fetch if vehicleId changes
 
   const refreshVehicle = async () => {
     await fetchVehicle();
