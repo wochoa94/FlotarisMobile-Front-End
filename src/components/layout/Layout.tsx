@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigation } from './Navigation';
+import { View, StyleSheet } from 'react-native';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -7,11 +7,24 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   return (
-    <div className="min-h-screen bg-gray-50 lg:ml-20">
-      <Navigation />
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 lg:ml-0">
+    <View style={styles.container}>
+      {/* Navigation component is typically handled by React Navigation at a higher level */}
+      <View style={styles.mainContent}>
         {children}
-      </main>
-    </div>
+      </View>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1, // Takes up full height
+    backgroundColor: '#f9fafb', // Equivalent to bg-gray-50 from default theme
+  },
+  mainContent: {
+    flex: 1, // Takes remaining space
+    paddingHorizontal: 16, // Equivalent to px-4, sm:px-6, lg:px-8
+    paddingVertical: 24, // Equivalent to py-6
+    // lg:ml-0 and lg:ml-20 are web-specific for sidebar, removed for mobile
+  },
+});
