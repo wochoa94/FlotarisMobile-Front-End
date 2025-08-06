@@ -108,6 +108,7 @@ export function GanttChart({
         }, 100);
       }
     }
+  }, [dateRange]);
 
   return (
     <View style={styles.container}>
