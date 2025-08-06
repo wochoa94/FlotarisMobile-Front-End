@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
-import { Calendar, Truck, Wrench, User, MapPin, FileText, AlertTriangle } from 'lucide-react';
 import { GanttItem, GanttVehicle } from '../../../types';
 import { 
   addDaysToDate, 
@@ -21,8 +22,7 @@ interface GanttChartProps {
 
 interface TooltipData {
   item: GanttItem;
-  x: number;
-  y: number;
+  visible: boolean;
 }
 
 const DAY_WIDTH_PX = 120;
@@ -37,8 +37,9 @@ export function GanttChart({
   startDate, 
   daysToShow 
 }: GanttChartProps) {
-  const [tooltip, setTooltip] = useState<TooltipData | null>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [tooltip, setTooltip] = useState<TooltipData>({ item: null as any, visible: false });
+  const scrollViewRef = useRef<ScrollView>(null);
+  const { width: screenWidth } = Dimensions.get('window');
 
   // Generate date range for the chart
   const dateRange = Array.from({ length: daysToShow }, (_, i) => 
@@ -83,141 +84,131 @@ export function GanttChart({
     return acc;
   }, {} as Record<string, GanttItem[]>);
 
-  // Handle item hover
-  const handleItemMouseEnter = (event: React.MouseEvent, item: GanttItem) => {
-    const rect = event.currentTarget.getBoundingClientRect();
+  // Handle item long press for tooltip
+  const handleItemLongPress = (item: GanttItem) => {
     setTooltip({
       item,
-      x: rect.left + rect.width / 2,
-      y: rect.top - 10
+      visible: true
     });
   };
 
-  const handleItemMouseLeave = () => {
-    setTooltip(null);
-  };
-
-  // Handle keyboard navigation
-  const handleItemKeyDown = (event: React.KeyboardEvent, item: GanttItem) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      // Could trigger a detail modal or navigation here
-      console.log('Item selected:', item);
-    }
+  const hideTooltip = () => {
+    setTooltip({ item: null as any, visible: false });
   };
 
   // Auto-scroll to today on mount
   useEffect(() => {
-    if (scrollContainerRef.current) {
+    if (scrollViewRef.current) {
       const todayIndex = dateRange.findIndex(date => isToday(date));
       if (todayIndex >= 0) {
         const scrollPosition = Math.max(0, todayIndex * DAY_WIDTH_PX - 200);
-        scrollContainerRef.current.scrollLeft = scrollPosition;
+        setTimeout(() => {
+          scrollViewRef.current?.scrollTo({ x: scrollPosition, animated: true });
+        }, 100);
       }
     }
   }, [startDate]);
 
   return (
-    <div>
+    <View style={styles.container}>
       {/* Main Gantt Chart Container */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-            Fleet Timeline
-          </h3>
+      <View style={styles.chartContainer}>
+        <View style={styles.chartContent}>
+          <Text style={styles.chartTitle}>Fleet Timeline</Text>
 
-          {/* Main Gantt Chart Container with Scrolling */}
-          <div 
-            ref={scrollContainerRef}
-            className="overflow-x-auto overflow-y-auto max-h-96 relative"
-            style={{ scrollbarWidth: 'thin' }}
-          >
-            {/* Date Headers - Sticky to top during vertical scroll */}
-            <div className="flex border-b border-gray-200 bg-gray-50 sticky top-0 z-30">
-              {/* Vehicle Column Header - Sticky to left and top */}
-              <div 
-                className="flex-shrink-0 border-r border-gray-200 bg-gray-100 sticky left-0 z-40"
-                style={{ width: VEHICLE_COLUMN_WIDTH }}
-              >
-                <div className="p-3 font-semibold text-gray-900 text-sm">
-                  Vehicles ({vehicles.length})
-                </div>
-              </div>
-              
-              {/* Date Headers - Scroll horizontally */}
-              <div 
-                className="flex"
-                style={{ width: chartWidth }}
-              >
+          {/* Date Headers - Fixed at top */}
+          <View style={styles.dateHeaderContainer}>
+            {/* Vehicle Column Header */}
+            <View style={[styles.vehicleColumnHeader, { width: VEHICLE_COLUMN_WIDTH }]}>
+              <Text style={styles.vehicleHeaderText}>
+                Vehicles ({vehicles.length})
+              </Text>
+            </View>
+            
+            {/* Scrollable Date Headers */}
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              ref={scrollViewRef}
+              style={styles.dateHeaderScroll}
+            >
+              <View style={[styles.dateHeaderRow, { width: chartWidth }]}>
                 {dateRange.map((date, index) => (
-                  <div
+                  <View
                     key={index}
-                    className={`flex-shrink-0 border-r border-gray-200 p-3 text-center text-sm font-medium ${
-                      isToday(date) 
-                        ? 'bg-blue-50 text-blue-700 border-blue-200' 
-                        : 'text-gray-700'
-                    }`}
-                    style={{ width: DAY_WIDTH_PX }}
+                    style={[
+                      styles.dateHeader,
+                      { width: DAY_WIDTH_PX },
+                      isToday(date) && styles.todayDateHeader
+                    ]}
                   >
-                    <div>{formatGanttDate(date)}</div>
-                    <div className="text-xs text-gray-500 mt-1">
+                    <Text style={[
+                      styles.dateHeaderText,
+                      isToday(date) && styles.todayDateHeaderText
+                    ]}>
+                      {formatGanttDate(date)}
+                    </Text>
+                    <Text style={[
+                      styles.dayHeaderText,
+                      isToday(date) && styles.todayDayHeaderText
+                    ]}>
                       {format(date, 'EEE')}
-                    </div>
-                  </div>
+                    </Text>
+                  </View>
                 ))}
-              </div>
-            </div>
+              </View>
+            </ScrollView>
+          </View>
 
-            {/* Vehicle Rows Content */}
-            <div>
-              {vehicles.map((vehicle) => {
-                const vehicleItems = itemsByVehicle[vehicle.id] || [];
-                return (
-                  <div
-                    key={vehicle.id}
-                    className="flex border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150"
-                    style={{ height: ROW_HEIGHT }}
+          {/* Vehicle Rows Content */}
+          <ScrollView style={styles.vehicleRowsContainer}>
+            {vehicles.map((vehicle) => {
+              const vehicleItems = itemsByVehicle[vehicle.id] || [];
+              return (
+                <View
+                  key={vehicle.id}
+                  style={[styles.vehicleRow, { height: ROW_HEIGHT }]}
+                >
+                  {/* Vehicle Info Column - Fixed on left */}
+                  <View style={[styles.vehicleInfoColumn, { width: VEHICLE_COLUMN_WIDTH }]}>
+                    <View style={styles.vehicleInfoContent}>
+                      <View style={styles.vehicleStatusIndicator}>
+                        <View style={[
+                          styles.statusDot,
+                          vehicle.status === 'active' ? styles.statusActive : 
+                          vehicle.status === 'maintenance' ? styles.statusMaintenance : styles.statusIdle
+                        ]} />
+                      </View>
+                      <View style={styles.vehicleDetails}>
+                        <Text style={styles.vehicleName} numberOfLines={1}>
+                          {vehicle.name}
+                        </Text>
+                        <Text style={styles.vehicleSubtext} numberOfLines={1}>
+                          {vehicle.make} {vehicle.model} {vehicle.year}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Timeline Area - Scrollable horizontally */}
+                  <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.timelineScroll}
                   >
-                    {/* Vehicle Info Column - Sticky to left */}
-                    <div
-                      className="flex-shrink-0 border-r border-gray-200 bg-white sticky left-0 z-20 flex items-center"
-                      style={{ width: VEHICLE_COLUMN_WIDTH }}
-                    >
-                      <div className="p-3 w-full">
-                        <div className="flex items-center space-x-3">
-                          <div className="flex-shrink-0">
-                            <div className={`w-3 h-3 rounded-full ${
-                              vehicle.status === 'active' ? 'bg-green-500' : 
-                              vehicle.status === 'maintenance' ? 'bg-yellow-500' : 'bg-red-500'
-                            }`} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-gray-900 truncate">
-                              {vehicle.name}
-                            </div>
-                            <div className="text-xs text-gray-500 truncate">
-                              {vehicle.make} {vehicle.model} {vehicle.year}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Timeline Area - Scrolls horizontally */}
-                    <div 
-                      className="relative flex-shrink-0"
-                      style={{ width: chartWidth }}
-                    >
+                    <View style={[styles.timelineArea, { width: chartWidth }]}>
                       {/* Today Indicator */}
                       {dateRange.map((date, dateIndex) => (
                         isToday(date) && (
-                          <div
+                          <View
                             key={`today-${dateIndex}`}
-                            className="absolute top-0 bottom-0 bg-blue-100 border-l-2 border-blue-400 opacity-50 pointer-events-none"
-                            style={{
-                              left: dateIndex * DAY_WIDTH_PX,
-                              width: DAY_WIDTH_PX
-                            }}
+                            style={[
+                              styles.todayIndicator,
+                              {
+                                left: dateIndex * DAY_WIDTH_PX,
+                                width: DAY_WIDTH_PX
+                              }
+                            ]}
                           />
                         )
                       ))}
@@ -229,125 +220,336 @@ export function GanttChart({
 
                         const isSchedule = item.type === 'schedule';
                         const isMaintenance = item.type === 'maintenance';
-                        const isCompleted = item.details.status === 'completed';
 
                         return (
-                          <div
+                          <TouchableOpacity
                             key={item.id}
-                            className="absolute rounded-md shadow-sm cursor-pointer transition-all duration-200 hover:shadow-md hover:opacity-90 hover:z-10 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500"
-                            style={{
-                              left: position.left,
-                              width: position.width,
-                              top: ITEM_MARGIN + (itemIndex % 2) * (ITEM_HEIGHT + ITEM_MARGIN),
-                              height: ITEM_HEIGHT,
-                              backgroundColor: item.color
-                            }}
-                            onMouseEnter={(e) => handleItemMouseEnter(e, item)}
-                            onMouseLeave={handleItemMouseLeave}
-                            onKeyDown={(e) => handleItemKeyDown(e, item)}
-                            tabIndex={0}
-                            role="button"
-                            aria-label={`${item.type}: ${item.title}`}
+                            style={[
+                              styles.ganttItem,
+                              {
+                                left: position.left,
+                                width: position.width,
+                                top: ITEM_MARGIN + (itemIndex % 2) * (ITEM_HEIGHT + ITEM_MARGIN),
+                                height: ITEM_HEIGHT,
+                                backgroundColor: item.color
+                              }
+                            ]}
+                            onLongPress={() => handleItemLongPress(item)}
+                            activeOpacity={0.8}
                           >
-                            <div className="flex items-center h-full px-2 text-white text-xs font-medium">
-                              <div className="flex items-center space-x-1 truncate">
+                            <View style={styles.ganttItemContent}>
+                              <View style={styles.ganttItemIcon}>
                                 {isSchedule ? (
-                                  <Truck className="h-3 w-3 flex-shrink-0" />
+                                  <MaterialCommunityIcons name="truck" size={12} color="white" />
                                 ) : (
-                                  <Wrench className="h-3 w-3 flex-shrink-0" />
+                                  <MaterialIcons name="build" size={12} color="white" />
                                 )}
-                                <span className="truncate">{item.title}</span>
-                                {item.details.urgent && (
-                                  <AlertTriangle className="h-3 w-3 flex-shrink-0 text-red-200" />
-                                )}
-                              </div>
-                            </div>
-                          </div>
+                              </View>
+                              <Text style={styles.ganttItemText} numberOfLines={1}>
+                                {item.title}
+                              </Text>
+                              {item.details.urgent && (
+                                <MaterialIcons name="warning" size={12} color="#fecaca" />
+                              )}
+                            </View>
+                          </TouchableOpacity>
                         );
                       })}
-                    </div>
-                  </div>
-                );
-              })}
+                    </View>
+                  </ScrollView>
+                </View>
+              );
+            })}
 
-              {/* Empty State */}
-              {vehicles.length === 0 && (
-                <div className="flex items-center justify-center py-12 text-gray-500">
-                  <div className="text-center">
-                    <Truck className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                    <p className="text-sm">No vehicles found</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+            {/* Empty State */}
+            {vehicles.length === 0 && (
+              <View style={styles.emptyState}>
+                <MaterialCommunityIcons name="truck" size={48} color="#d1d5db" />
+                <Text style={styles.emptyStateText}>No vehicles found</Text>
+              </View>
+            )}
+          </ScrollView>
         </div>
-      </div>
+      </View>
 
-      {/* Tooltip */}
-      {tooltip && (
-        <div
-          className="fixed z-50 bg-gray-900 text-white text-xs rounded-lg shadow-lg p-3 max-w-xs pointer-events-none"
-          style={{
-            left: tooltip.x,
-            top: tooltip.y,
-            transform: 'translateX(-50%) translateY(-100%)'
-          }}
-        >
-          <div className="space-y-2">
-            <div className="flex items-center space-x-2">
+      {/* Tooltip Modal */}
+      {tooltip.visible && tooltip.item && (
+        <Modal
+          isOpen={tooltip.visible}
+          onClose={hideTooltip}
+          headerContent={
+            <View style={styles.tooltipHeader}>
               {tooltip.item.type === 'schedule' ? (
-                <Truck className="h-4 w-4 text-blue-400" />
+                <MaterialCommunityIcons name="truck" size={20} color="#3b82f6" />
               ) : (
-                <Wrench className="h-4 w-4 text-amber-400" />
+                <MaterialIcons name="build" size={20} color="#f59e0b" />
               )}
-              <span className="font-semibold">{tooltip.item.title}</span>
-              {tooltip.item.details.urgent && (
-                <AlertTriangle className="h-4 w-4 text-red-400" />
-              )}
-            </div>
-            
-            <div className="text-gray-300 space-y-1">
-              <div className="flex items-center space-x-2">
-                <Calendar className="h-3 w-3" />
-                <span>
+              <View style={styles.tooltipHeaderText}>
+                <Text style={styles.tooltipTitle}>{tooltip.item.title}</Text>
+                {tooltip.item.details.urgent && (
+                  <View style={styles.urgentIndicator}>
+                    <MaterialIcons name="warning" size={16} color="#ef4444" />
+                    <Text style={styles.urgentText}>Urgent</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          }
+        >
+          <View style={styles.tooltipContent}>
+            <View style={styles.tooltipDetails}>
+              <View style={styles.tooltipDetailItem}>
+                <MaterialIcons name="event" size={16} color="#6b7280" />
+                <Text style={styles.tooltipDetailText}>
                   {formatTooltipDate(tooltip.item.startDate)} - {formatTooltipDate(tooltip.item.endDate)}
-                </span>
-              </div>
+                </Text>
+              </View>
               
               {tooltip.item.details.driverName && (
-                <div className="flex items-center space-x-2">
-                  <User className="h-3 w-3" />
-                  <span>{tooltip.item.details.driverName}</span>
-                </div>
+                <View style={styles.tooltipDetailItem}>
+                  <MaterialCommunityIcons name="account" size={16} color="#6b7280" />
+                  <Text style={styles.tooltipDetailText}>{tooltip.item.details.driverName}</Text>
+                </View>
               )}
               
               {tooltip.item.details.location && (
-                <div className="flex items-center space-x-2">
-                  <MapPin className="h-3 w-3" />
-                  <span>{tooltip.item.details.location}</span>
-                </div>
+                <View style={styles.tooltipDetailItem}>
+                  <MaterialIcons name="place" size={16} color="#6b7280" />
+                  <Text style={styles.tooltipDetailText}>{tooltip.item.details.location}</Text>
+                </View>
               )}
               
               {tooltip.item.details.description && (
-                <div className="flex items-start space-x-2">
-                  <FileText className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                  <span className="break-words">{tooltip.item.details.description}</span>
-                </div>
+                <View style={styles.tooltipDetailItem}>
+                  <MaterialIcons name="description" size={16} color="#6b7280" />
+                  <Text style={styles.tooltipDetailText}>{tooltip.item.details.description}</Text>
+                </View>
               )}
               
-              <div className="text-xs text-gray-400 capitalize">
-                Status: {tooltip.item.details.status}
-              </div>
-            </div>
-          </div>
-          
-          {/* Tooltip Arrow */}
-          <div 
-            className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"
-          />
-        </div>
+              <View style={styles.tooltipDetailItem}>
+                <MaterialIcons name="info" size={16} color="#6b7280" />
+                <Text style={styles.tooltipDetailText}>
+                  Status: {tooltip.item.details.status}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </Modal>
       )}
-    </div>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  chartContainer: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  chartContent: {
+    padding: 20,
+  },
+  chartTitle: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+    marginBottom: 16,
+  },
+  dateHeaderContainer: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    backgroundColor: '#f9fafb',
+  },
+  vehicleColumnHeader: {
+    borderRightWidth: 1,
+    borderRightColor: '#e5e7eb',
+    backgroundColor: '#f3f4f6',
+    padding: 12,
+    justifyContent: 'center',
+  },
+  vehicleHeaderText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  dateHeaderScroll: {
+    flex: 1,
+  },
+  dateHeaderRow: {
+    flexDirection: 'row',
+  },
+  dateHeader: {
+    borderRightWidth: 1,
+    borderRightColor: '#e5e7eb',
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  todayDateHeader: {
+    backgroundColor: '#eff6ff',
+    borderRightColor: '#bfdbfe',
+  },
+  dateHeaderText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+  },
+  todayDateHeaderText: {
+    color: '#1d4ed8',
+  },
+  dayHeaderText: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  todayDayHeaderText: {
+    color: '#3b82f6',
+  },
+  vehicleRowsContainer: {
+    maxHeight: 400,
+  },
+  vehicleRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  vehicleInfoColumn: {
+    borderRightWidth: 1,
+    borderRightColor: '#e5e7eb',
+    backgroundColor: 'white',
+    justifyContent: 'center',
+  },
+  vehicleInfoContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+  },
+  vehicleStatusIndicator: {
+    marginRight: 12,
+  },
+  statusDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  statusActive: {
+    backgroundColor: '#10b981',
+  },
+  statusMaintenance: {
+    backgroundColor: '#f59e0b',
+  },
+  statusIdle: {
+    backgroundColor: '#ef4444',
+  },
+  vehicleDetails: {
+    flex: 1,
+  },
+  vehicleName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  vehicleSubtext: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  timelineScroll: {
+    flex: 1,
+  },
+  timelineArea: {
+    position: 'relative',
+    height: ROW_HEIGHT,
+  },
+  todayIndicator: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    backgroundColor: '#dbeafe',
+    borderLeftWidth: 2,
+    borderLeftColor: '#3b82f6',
+    opacity: 0.5,
+  },
+  ganttItem: {
+    position: 'absolute',
+    borderRadius: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  ganttItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: '100%',
+    paddingHorizontal: 8,
+  },
+  ganttItemIcon: {
+    marginRight: 4,
+  },
+  ganttItemText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: 'white',
+    flex: 1,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 48,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginTop: 16,
+  },
+  tooltipHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  tooltipHeaderText: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  tooltipTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  urgentIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  urgentText: {
+    fontSize: 12,
+    color: '#ef4444',
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+  tooltipContent: {
+    gap: 16,
+  },
+  tooltipDetails: {
+    gap: 12,
+  },
+  tooltipDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  tooltipDetailText: {
+    fontSize: 14,
+    color: '#374151',
+    marginLeft: 12,
+    flex: 1,
+  },
+});

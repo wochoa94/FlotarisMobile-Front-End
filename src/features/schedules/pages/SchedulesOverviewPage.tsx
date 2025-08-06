@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, TrendingUp, Truck, Wrench, AlertTriangle, Settings } from 'lucide-react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useGanttChartData } from '../hooks/useGanttChartData';
 import { LoadingSpinner } from '../../../components/ui/LoadingSpinner';
 import { GanttChart } from '../components/GanttChart';
 import { getToday, addDaysToDate } from '../../../utils/dateUtils';
 import { DateNavigationModal } from '../components/DateNavigationModal';
+import { Button } from '../../../components/ui/Button';
 
 export function SchedulesOverviewPage() {
+  const navigation = useNavigation();
+  
   // Date control state
   const [currentStartDate, setCurrentStartDate] = useState(getToday());
   const [daysToShow, setDaysToShow] = useState(7);
@@ -51,208 +56,193 @@ export function SchedulesOverviewPage() {
 
   if (error) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Schedules Overview</h1>
-          <p className="mt-1 text-sm text-gray-600">
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Schedules Overview</Text>
+          <Text style={styles.headerSubtitle}>
             Interactive timeline view of vehicle schedules and maintenance orders
-          </p>
-        </div>
+          </Text>
+        </View>
         
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="text-red-800">
-              <h3 className="font-medium">Error loading schedules overview</h3>
-              <p className="text-sm mt-1">{error}</p>
-            </div>
-            <button
-              onClick={refreshGanttData}
-              className="text-red-600 hover:text-red-700 transition-colors duration-200"
-            >
-              <AlertTriangle className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-      </div>
+        <View style={styles.errorContainer}>
+          <View style={styles.errorContent}>
+            <Text style={styles.errorTitle}>Error loading schedules overview</Text>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+          <TouchableOpacity
+            onPress={refreshGanttData}
+            style={styles.retryButton}
+            activeOpacity={0.7}
+          >
+            <MaterialIcons name="refresh" size={20} color="#ef4444" />
+          </TouchableOpacity>
+        </View>
+      </View>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Schedules Overview</h1>
-        <p className="mt-1 text-sm text-gray-600">
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Schedules Overview</Text>
+        <Text style={styles.headerSubtitle}>
           Interactive timeline view of vehicle schedules and maintenance orders
-        </p>
-      </div>
+        </Text>
+      </View>
 
       {/* Enhanced Date Range Controls */}
-      <div className="flex justify-between items-center">
-        <div className="text-sm text-gray-600">
+      <View style={styles.dateControls}>
+        <View style={styles.dateControlsLeft}>
           {loading && (
-            <span className="inline-flex items-center">
-              <LoadingSpinner size="sm" className="mr-2" />
-              Loading data...
-            </span>
+            <View style={styles.loadingIndicator}>
+              <LoadingSpinner size="sm" />
+              <Text style={styles.loadingText}>Loading data...</Text>
+            </View>
           )}
-        </div>
-        <button
-          onClick={() => setShowDateNavigationModal(true)}
-          className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+        </View>
+        <Button
+          onPress={() => setShowDateNavigationModal(true)}
+          variant="secondary"
         >
-          <Settings className="h-4 w-4 mr-2" />
-          Date Navigation
-        </button>
-      </div>
+          <View style={styles.buttonContent}>
+            <MaterialIcons name="settings" size={16} color="#6b7280" />
+            <Text style={styles.dateNavigationText}>Date Navigation</Text>
+          </View>
+        </Button>
+      </View>
 
       {/* Gantt Chart */}
-      <GanttChart
-        vehicles={ganttVehicles}
-        items={ganttItems}
-        startDate={currentStartDate}
-        daysToShow={daysToShow}
-      />
+      <View style={styles.ganttContainer}>
+        <GanttChart
+          vehicles={ganttVehicles}
+          items={ganttItems}
+          startDate={currentStartDate}
+          daysToShow={daysToShow}
+        />
+      </View>
 
       {/* Summary Statistics */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="bg-blue-500 p-3 rounded-md">
-                  <Calendar className="h-6 w-6 text-white" />
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Items</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.totalItems}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
+      <View style={styles.statsGrid}>
+        <View style={styles.statCard}>
+          <View style={styles.statContent}>
+            <View style={[styles.statIcon, { backgroundColor: '#3b82f6' }]}>
+              <MaterialIcons name="event" size={24} color="white" />
+            </View>
+            <View style={styles.statInfo}>
+              <Text style={styles.statLabel}>Total Items</Text>
+              <Text style={styles.statValue}>{stats.totalItems}</Text>
+            </View>
+          </View>
+        </View>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="bg-green-500 p-3 rounded-md">
-                  <TrendingUp className="h-6 w-6 text-white" />
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Active Schedules</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.activeSchedules}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
+        <View style={styles.statCard}>
+          <View style={styles.statContent}>
+            <View style={[styles.statIcon, { backgroundColor: '#10b981' }]}>
+              <MaterialIcons name="trending-up" size={24} color="white" />
+            </View>
+            <View style={styles.statInfo}>
+              <Text style={styles.statLabel}>Active Schedules</Text>
+              <Text style={styles.statValue}>{stats.activeSchedules}</Text>
+            </View>
+          </View>
+        </View>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="bg-amber-500 p-3 rounded-md">
-                  <Wrench className="h-6 w-6 text-white" />
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Active Maintenance</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.activeMaintenance}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
+        <View style={styles.statCard}>
+          <View style={styles.statContent}>
+            <View style={[styles.statIcon, { backgroundColor: '#f59e0b' }]}>
+              <MaterialIcons name="build" size={24} color="white" />
+            </View>
+            <View style={styles.statInfo}>
+              <Text style={styles.statLabel}>Active Maintenance</Text>
+              <Text style={styles.statValue}>{stats.activeMaintenance}</Text>
+            </View>
+          </View>
+        </View>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="bg-red-500 p-3 rounded-md">
-                  <AlertTriangle className="h-6 w-6 text-white" />
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Urgent Items</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.urgentItems}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+        <View style={styles.statCard}>
+          <View style={styles.statContent}>
+            <View style={[styles.statIcon, { backgroundColor: '#ef4444' }]}>
+              <MaterialIcons name="warning" size={24} color="white" />
+            </View>
+            <View style={styles.statInfo}>
+              <Text style={styles.statLabel}>Urgent Items</Text>
+              <Text style={styles.statValue}>{stats.urgentItems}</Text>
+            </View>
+          </View>
+        </View>
+      </View>
 
       {/* Legend */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <h3 className="text-sm font-medium text-gray-900 mb-3">Legend</h3>
-        <div className="flex flex-wrap gap-6">
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-blue-500 rounded"></div>
-            <span className="text-sm text-gray-700">Vehicle Schedules</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-amber-500 rounded"></div>
-            <span className="text-sm text-gray-700">Scheduled/Active Maintenance</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-yellow-50 rounded border border-gray-300"></div>
-            <span className="text-sm text-gray-700">Pending Authorization Maintenance</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-gray-500 rounded"></div>
-            <span className="text-sm text-gray-700">Completed Items</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-            <span className="text-sm text-gray-700">Active Vehicle</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-            <span className="text-sm text-gray-700">Maintenance Vehicle</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-            <span className="text-sm text-gray-700">Idle Vehicle</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <AlertTriangle className="h-4 w-4 text-red-500" />
-            <span className="text-sm text-gray-700">Urgent</span>
-          </div>
-        </div>
-      </div>
+      <View style={styles.legendContainer}>
+        <Text style={styles.legendTitle}>Legend</Text>
+        <View style={styles.legendGrid}>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendColor, { backgroundColor: '#3b82f6' }]} />
+            <Text style={styles.legendText}>Vehicle Schedules</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendColor, { backgroundColor: '#f59e0b' }]} />
+            <Text style={styles.legendText}>Scheduled/Active Maintenance</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendColor, { backgroundColor: '#FFF59D', borderWidth: 1, borderColor: '#d1d5db' }]} />
+            <Text style={styles.legendText}>Pending Authorization Maintenance</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendColor, { backgroundColor: '#808080' }]} />
+            <Text style={styles.legendText}>Completed Items</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: '#10b981' }]} />
+            <Text style={styles.legendText}>Active Vehicle</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: '#f59e0b' }]} />
+            <Text style={styles.legendText}>Maintenance Vehicle</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: '#ef4444' }]} />
+            <Text style={styles.legendText}>Idle Vehicle</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <MaterialIcons name="warning" size={16} color="#ef4444" />
+            <Text style={styles.legendText}>Urgent</Text>
+          </View>
+        </View>
+      </View>
 
       {/* Empty State */}
       {ganttItems.length === 0 && !loading && (
-        <div className="text-center py-12 bg-white rounded-lg shadow-sm border border-gray-200">
-          <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No schedules or maintenance orders</h3>
-          <p className="text-gray-500 mb-4">
+        <View style={styles.emptyState}>
+          <MaterialIcons name="event" size={48} color="#9ca3af" />
+          <Text style={styles.emptyStateTitle}>No schedules or maintenance orders</Text>
+          <Text style={styles.emptyStateText}>
             There are currently no items to display in the selected date range.
-          </p>
-          <div className="flex justify-center space-x-4">
-            <a
-              href="/vehicle-schedules/new"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+          </Text>
+          <View style={styles.emptyStateActions}>
+            <Button
+              onPress={() => navigation.navigate('AddVehicleSchedule')}
+              variant="primary"
+              style={styles.emptyStateButton}
             >
-              <Truck className="h-4 w-4 mr-2" />
-              Create Schedule
-            </a>
-            <a
-              href="/maintenance-orders/new"
-              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              <View style={styles.buttonContent}>
+                <MaterialCommunityIcons name="truck" size={16} color="white" />
+                <Text style={styles.emptyStateButtonText}>Create Schedule</Text>
+              </View>
+            </Button>
+            <Button
+              onPress={() => navigation.navigate('AddMaintenanceOrder')}
+              variant="secondary"
+              style={styles.emptyStateButton}
             >
-              <Wrench className="h-4 w-4 mr-2" />
-              Create Maintenance Order
-            </a>
-          </div>
-        </div>
+              <View style={styles.buttonContent}>
+                <MaterialIcons name="build" size={16} color="#6b7280" />
+                <Text style={styles.emptyStateSecondaryButtonText}>Create Maintenance Order</Text>
+              </View>
+            </Button>
+          </View>
+        </View>
       )}
 
       {/* Date Navigation Modal */}
@@ -267,6 +257,202 @@ export function SchedulesOverviewPage() {
         onNextWeek={goToNextWeek}
         onGoToToday={goToToday}
       />
-    </div>
+    </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  scrollContent: {
+    padding: 24,
+  },
+  header: {
+    marginBottom: 24,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  dateControls: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  dateControlsLeft: {
+    flex: 1,
+  },
+  loadingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginLeft: 8,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dateNavigationText: {
+    color: '#6b7280',
+    marginLeft: 8,
+  },
+  ganttContainer: {
+    marginBottom: 24,
+  },
+  statsGrid: {
+    gap: 16,
+    marginBottom: 24,
+  },
+  statCard: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  statContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 20,
+  },
+  statInfo: {
+    flex: 1,
+  },
+  statLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6b7280',
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  legendContainer: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    padding: 16,
+    marginBottom: 24,
+  },
+  legendTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+    marginBottom: 12,
+  },
+  legendGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 24,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: '45%',
+  },
+  legendColor: {
+    width: 16,
+    height: 16,
+    borderRadius: 2,
+    marginRight: 8,
+  },
+  legendDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  legendText: {
+    fontSize: 14,
+    color: '#374151',
+  },
+  emptyState: {
+    alignItems: 'center',
+    padding: 48,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    marginBottom: 24,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  emptyStateActions: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  emptyStateButton: {
+    flex: 1,
+  },
+  emptyStateButtonText: {
+    color: 'white',
+    marginLeft: 8,
+  },
+  emptyStateSecondaryButtonText: {
+    color: '#6b7280',
+    marginLeft: 8,
+  },
+  errorContainer: {
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    borderRadius: 8,
+    padding: 16,
+    margin: 24,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  errorContent: {
+    flex: 1,
+  },
+  errorTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#991b1b',
+    marginBottom: 4,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#991b1b',
+  },
+  retryButton: {
+    padding: 8,
+  },
+});

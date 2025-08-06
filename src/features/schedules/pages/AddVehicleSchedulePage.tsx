@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Plus, X, AlertCircle, CheckCircle, ChevronRight, ChevronLeft, Calendar, Truck, User, FileText } from 'lucide-react';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../../../hooks/useAuth';
 import { useFleetData } from '../../../hooks/useFleetData';
 import { vehicleScheduleService } from '../../../services/apiService';
@@ -20,7 +21,7 @@ interface VehicleScheduleFormData {
 }
 
 export function AddVehicleSchedulePage() {
-  const navigate = useNavigate();
+  const navigation = useNavigation();
   const { user } = useAuth();
   const { data, refreshData } = useFleetData();
   
@@ -49,8 +50,7 @@ export function AddVehicleSchedulePage() {
     }
   }, [successMessage, errorMessage]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+  const handleInputChange = (name: string, value: string) => {
     setFormData(prev => ({
       ...prev,
       [name]: value,
@@ -62,30 +62,6 @@ export function AddVehicleSchedulePage() {
         ...prev,
         [currentStep]: '',
       }));
-    }
-  };
-
-  // Handle Enter key press in notes textarea to prevent form submission
-  const handleNotesKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      // Allow Shift+Enter for new lines, but prevent plain Enter from submitting the form
-      e.preventDefault();
-      // Insert a new line manually
-      const textarea = e.target as HTMLTextAreaElement;
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const value = textarea.value;
-      const newValue = value.substring(0, start) + '\n' + value.substring(end);
-      
-      setFormData(prev => ({
-        ...prev,
-        notes: newValue,
-      }));
-      
-      // Set cursor position after the inserted newline
-      setTimeout(() => {
-        textarea.selectionStart = textarea.selectionEnd = start + 1;
-      }, 0);
     }
   };
 
@@ -160,9 +136,7 @@ export function AddVehicleSchedulePage() {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleSubmit = async () => {
     // Clear previous messages
     setSuccessMessage('');
     setErrorMessage('');
@@ -197,7 +171,7 @@ export function AddVehicleSchedulePage() {
       
       // Redirect to vehicle schedules page after a short delay
       setTimeout(() => {
-        navigate('/vehicle-schedules');
+        navigation.navigate('VehicleSchedules');
       }, 1500);
 
     } catch (error) {
@@ -239,435 +213,723 @@ export function AddVehicleSchedulePage() {
     { 
       number: 1, 
       title: 'Vehicle Selection', 
-      icon: Truck, 
+      icon: 'truck', 
       unlocked: true 
     },
     { 
       number: 2, 
       title: 'Date Range', 
-      icon: Calendar, 
+      icon: 'event', 
       unlocked: currentStep >= 2 || !!formData.vehicleId 
     },
     { 
       number: 3, 
       title: 'Driver & Notes', 
-      icon: User, 
+      icon: 'person', 
       unlocked: currentStep >= 3 || (!!formData.vehicleId && !!formData.startDate && !!formData.endDate) 
     },
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Link
-            to="/vehicle-schedules"
-            className="inline-flex items-center text-gray-500 hover:text-gray-700 transition-colors duration-200"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back to Vehicle Schedules
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Create Vehicle Schedule</h1>
-            <p className="text-sm text-gray-600">
-              Schedule a vehicle assignment for your fleet
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Success Message */}
-      {successMessage && (
-        <div className="rounded-md bg-green-50 border border-green-200 p-4 transition-all duration-300">
-          <div className="flex items-center justify-between">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <CheckCircle className="h-5 w-5 text-green-400" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-green-800">{successMessage}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => dismissMessage('success')}
-              className="text-green-400 hover:text-green-600 transition-colors duration-200"
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('VehicleSchedules')}
+              style={styles.backButton}
+              activeOpacity={0.7}
             >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      )}
+              <View style={styles.backButtonContent}>
+                <MaterialIcons name="arrow-back" size={16} color="#6b7280" />
+                <Text style={styles.backButtonText}>Back to Vehicle Schedules</Text>
+              </View>
+            </TouchableOpacity>
+            <View style={styles.headerInfo}>
+              <Text style={styles.headerTitle}>Create Vehicle Schedule</Text>
+              <Text style={styles.headerSubtitle}>
+                Schedule a vehicle assignment for your fleet
+              </Text>
+            </View>
+          </View>
+        </View>
 
-      {/* Error Message */}
-      {errorMessage && (
-        <div className="rounded-md bg-red-50 border border-red-200 p-4 transition-all duration-300">
-          <div className="flex items-center justify-between">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <AlertCircle className="h-5 w-5 text-red-400" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-red-800">{errorMessage}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => dismissMessage('error')}
-              className="text-red-400 hover:text-red-600 transition-colors duration-200"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      )}
+        {/* Success Message */}
+        {successMessage && (
+          <Alert
+            type="success"
+            message={successMessage}
+            onDismiss={() => dismissMessage('success')}
+          />
+        )}
 
-      {/* Step Progress Indicator */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <nav aria-label="Progress">
-            <ol className="flex items-center">
+        {/* Error Message */}
+        {errorMessage && (
+          <Alert
+            type="error"
+            message={errorMessage}
+            onDismiss={() => dismissMessage('error')}
+          />
+        )}
+
+        {/* Step Progress Indicator */}
+        <View style={styles.progressContainer}>
+          <View style={styles.progressContent}>
+            <View style={styles.stepIndicators}>
               {steps.map((step, stepIdx) => {
-                const Icon = step.icon;
                 const isActive = currentStep === step.number;
                 const isCompleted = currentStep > step.number;
                 const isUnlocked = step.unlocked;
                 
                 return (
-                  <li key={step.number} className={`${stepIdx !== steps.length - 1 ? 'flex-1' : ''} relative`}>
-                    <div className="flex items-center">
-                      <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-colors duration-200 ${
-                        isCompleted 
-                          ? 'bg-blue-600 border-blue-600 text-white' 
-                          : isActive 
-                            ? 'border-blue-600 text-blue-600 bg-white' 
-                            : isUnlocked
-                              ? 'border-gray-300 text-gray-500 bg-white'
-                              : 'border-gray-200 text-gray-300 bg-gray-50'
-                      }`}>
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <div className="ml-3">
-                        <p className={`text-sm font-medium ${
-                          isActive ? 'text-blue-600' : isCompleted ? 'text-gray-900' : isUnlocked ? 'text-gray-500' : 'text-gray-300'
-                        }`}>
-                          {step.title}
-                        </p>
-                      </div>
-                    </div>
+                  <View key={step.number} style={styles.stepContainer}>
+                    <View style={styles.stepIndicator}>
+                      <View style={[
+                        styles.stepCircle,
+                        isCompleted ? styles.stepCompleted : 
+                        isActive ? styles.stepActive : 
+                        isUnlocked ? styles.stepUnlocked : styles.stepLocked
+                      ]}>
+                        <MaterialCommunityIcons
+                          name={step.icon as any}
+                          size={20}
+                          color={
+                            isCompleted ? 'white' : 
+                            isActive ? '#2563eb' : 
+                            isUnlocked ? '#6b7280' : '#d1d5db'
+                          }
+                        />
+                      </View>
+                      <Text style={[
+                        styles.stepTitle,
+                        isActive ? styles.stepTitleActive : 
+                        isCompleted ? styles.stepTitleCompleted : 
+                        isUnlocked ? styles.stepTitleUnlocked : styles.stepTitleLocked
+                      ]}>
+                        {step.title}
+                      </Text>
+                    </View>
                     {stepIdx !== steps.length - 1 && (
-                      <div className="absolute top-5 left-10 w-full h-0.5 bg-gray-200">
-                        <div className={`h-full transition-all duration-300 ${
-                          isCompleted ? 'bg-blue-600 w-full' : 'bg-gray-200 w-0'
-                        }`} />
-                      </div>
+                      <View style={[
+                        styles.stepConnector,
+                        isCompleted && styles.stepConnectorCompleted
+                      ]} />
                     )}
-                  </li>
+                  </View>
                 );
               })}
-            </ol>
-          </nav>
-        </div>
-      </div>
+            </View>
+          </View>
+        </View>
 
-      {/* Step Error Message */}
-      {stepErrors[currentStep] && (
-        <div className="rounded-md bg-red-50 border border-red-200 p-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <AlertCircle className="h-5 w-5 text-red-400" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-red-800">{stepErrors[currentStep]}</p>
-            </div>
-          </div>
-        </div>
-      )}
+        {/* Step Error Message */}
+        {stepErrors[currentStep] && (
+          <Alert
+            type="error"
+            message={stepErrors[currentStep]}
+            onDismiss={() => setStepErrors(prev => ({ ...prev, [currentStep]: '' }))}
+          />
+        )}
 
-      {/* Form */}
-      <div className="bg-white shadow rounded-lg">
-        <form onSubmit={handleSubmit} className="px-4 py-5 sm:p-6">
-          {/* Step 1: Vehicle Selection */}
-          {currentStep === 1 && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Step 1: Select Vehicle</h3>
-                <div>
-                  <Label htmlFor="vehicleId">
-                    Vehicle *
-                  </Label>
+        {/* Form */}
+        <View style={styles.formContainer}>
+          <View style={styles.formContent}>
+            {/* Step 1: Vehicle Selection */}
+            {currentStep === 1 && (
+              <View style={styles.stepContent}>
+                <Text style={styles.stepHeader}>Step 1: Select Vehicle</Text>
+                <View style={styles.inputGroup}>
+                  <Label>Vehicle *</Label>
                   <Input
                     as="select"
-                    id="vehicleId"
-                    name="vehicleId"
-                    value={formData.vehicleId}
-                    onChange={handleInputChange}
-                    required
+                    selectedValue={formData.vehicleId}
+                    onValueChange={(value) => handleInputChange('vehicleId', value)}
+                    enabled={!isLoading}
                   >
-                    <option value="">Select a vehicle</option>
+                    <Input.Item label="Select a vehicle" value="" />
                     {availableVehicles.map((vehicle) => (
-                      <option key={vehicle.id} value={vehicle.id}>
-                        {vehicle.name} - {vehicle.make} {vehicle.model} {vehicle.year} ({vehicle.status})
-                      </option>
+                      <Input.Item 
+                        key={vehicle.id} 
+                        label={`${vehicle.name} - ${vehicle.make} ${vehicle.model} ${vehicle.year} (${vehicle.status})`}
+                        value={vehicle.id}
+                      />
                     ))}
                   </Input>
                   {availableVehicles.length === 0 && (
-                    <p className="mt-1 text-sm text-red-600">No vehicles available for scheduling</p>
+                    <Text style={styles.errorHint}>No vehicles available for scheduling</Text>
                   )}
-                </div>
+                </View>
                 
                 {selectedVehicle && (
-                  <div className="mt-4 bg-blue-50 rounded-md p-4">
-                    <h4 className="text-sm font-medium text-blue-900 mb-2">Selected Vehicle Details</h4>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-blue-700">Name:</span>
-                        <span className="ml-2 font-medium">{selectedVehicle.name}</span>
-                      </div>
-                      <div>
-                        <span className="text-blue-700">Status:</span>
-                        <span className={`ml-2 font-medium capitalize ${
-                          selectedVehicle.status === 'maintenance' ? 'text-yellow-600' : ''
-                        }`}>
+                  <View style={styles.selectedVehicleInfo}>
+                    <Text style={styles.selectedVehicleTitle}>Selected Vehicle Details</Text>
+                    <View style={styles.selectedVehicleGrid}>
+                      <View style={styles.selectedVehicleItem}>
+                        <Text style={styles.selectedVehicleLabel}>Name:</Text>
+                        <Text style={styles.selectedVehicleValue}>{selectedVehicle.name}</Text>
+                      </View>
+                      <View style={styles.selectedVehicleItem}>
+                        <Text style={styles.selectedVehicleLabel}>Status:</Text>
+                        <Text style={[
+                          styles.selectedVehicleValue,
+                          selectedVehicle.status === 'maintenance' && styles.maintenanceWarning
+                        ]}>
                           {selectedVehicle.status}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-blue-700">Make/Model:</span>
-                        <span className="ml-2 font-medium">{selectedVehicle.make} {selectedVehicle.model}</span>
-                      </div>
-                      <div>
-                        <span className="text-blue-700">Year:</span>
-                        <span className="ml-2 font-medium">{selectedVehicle.year}</span>
-                      </div>
-                    </div>
+                        </Text>
+                      </View>
+                      <View style={styles.selectedVehicleItem}>
+                        <Text style={styles.selectedVehicleLabel}>Make/Model:</Text>
+                        <Text style={styles.selectedVehicleValue}>{selectedVehicle.make} {selectedVehicle.model}</Text>
+                      </View>
+                      <View style={styles.selectedVehicleItem}>
+                        <Text style={styles.selectedVehicleLabel}>Year:</Text>
+                        <Text style={styles.selectedVehicleValue}>{selectedVehicle.year}</Text>
+                      </View>
+                    </View>
                     {selectedVehicle.status === 'maintenance' && (
-                      <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                        <p className="text-sm text-yellow-800">
-                          <strong>Note:</strong> This vehicle is currently undergoing maintenance. 
+                      <View style={styles.maintenanceNotice}>
+                        <Text style={styles.maintenanceNoticeText}>
+                          <Text style={styles.maintenanceNoticeBold}>Note:</Text> This vehicle is currently undergoing maintenance. 
                           The backend will validate schedule conflicts with maintenance periods.
-                        </p>
-                      </div>
+                        </Text>
+                      </View>
                     )}
-                  </div>
+                  </View>
                 )}
-              </div>
-            </div>
-          )}
+              </View>
+            )}
 
-          {/* Step 2: Date Range Selection */}
-          {currentStep === 2 && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Step 2: Select Date Range</h3>
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                  <div>
-                    <Label htmlFor="startDate">
-                      Start Date *
-                    </Label>
+            {/* Step 2: Date Range Selection */}
+            {currentStep === 2 && (
+              <View style={styles.stepContent}>
+                <Text style={styles.stepHeader}>Step 2: Select Date Range</Text>
+                <View style={styles.dateRangeGrid}>
+                  <View style={styles.inputGroup}>
+                    <Label>Start Date *</Label>
                     <Input
-                      type="date"
-                      id="startDate"
-                      name="startDate"
                       value={formData.startDate}
-                      onChange={handleInputChange}
-                      required
-                      min={getTodayString()}
+                      onChangeText={(value) => handleInputChange('startDate', value)}
+                      placeholder="YYYY-MM-DD"
+                      editable={!isLoading}
                     />
-                  </div>
+                    <Text style={styles.inputHint}>
+                      Format: YYYY-MM-DD (minimum: {getTodayString()})
+                    </Text>
+                  </View>
                   
-                  <div>
-                    <Label htmlFor="endDate">
-                      End Date *
-                    </Label>
+                  <View style={styles.inputGroup}>
+                    <Label>End Date *</Label>
                     <Input
-                      type="date"
-                      id="endDate"
-                      name="endDate"
                       value={formData.endDate}
-                      onChange={handleInputChange}
-                      required
-                      min={formData.startDate || getTodayString()}
+                      onChangeText={(value) => handleInputChange('endDate', value)}
+                      placeholder="YYYY-MM-DD"
+                      editable={!isLoading}
                     />
-                  </div>
-                </div>
+                    <Text style={styles.inputHint}>
+                      Must be after start date
+                    </Text>
+                  </View>
+                </View>
                 
                 {formData.startDate && formData.endDate && (
-                  <div className="mt-4 bg-green-50 rounded-md p-4">
-                    <h4 className="text-sm font-medium text-green-900 mb-2">Schedule Duration</h4>
-                    <p className="text-sm text-green-700">
+                  <View style={styles.durationInfo}>
+                    <Text style={styles.durationTitle}>Schedule Duration</Text>
+                    <Text style={styles.durationValue}>
                       {(() => {
                         const startDateObj = parseDate(formData.startDate);
                         const endDateObj = parseDateEnd(formData.endDate);
                         const diffDays = getDaysBetweenDates(startDateObj, endDateObj);
                         return `${diffDays} day${diffDays !== 1 ? 's' : ''}`;
                       })()}
-                    </p>
-                  </div>
+                    </Text>
+                  </View>
                 )}
-              </div>
-            </div>
-          )}
+              </View>
+            )}
 
-          {/* Step 3: Driver Selection and Notes */}
-          {currentStep === 3 && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Step 3: Select Driver & Add Notes</h3>
+            {/* Step 3: Driver Selection and Notes */}
+            {currentStep === 3 && (
+              <View style={styles.stepContent}>
+                <Text style={styles.stepHeader}>Step 3: Select Driver & Add Notes</Text>
                 
                 {/* Driver Selection */}
-                <div className="mb-6">
-                  <Label htmlFor="driverId">
-                    Driver *
-                  </Label>
+                <View style={styles.inputGroup}>
+                  <Label>Driver *</Label>
                   <Input
                     as="select"
-                    id="driverId"
-                    name="driverId"
-                    value={formData.driverId}
-                    onChange={handleInputChange}
-                    required
+                    selectedValue={formData.driverId}
+                    onValueChange={(value) => handleInputChange('driverId', value)}
+                    enabled={!isLoading}
                   >
-                    <option value="">Select a driver</option>
+                    <Input.Item label="Select a driver" value="" />
                     {data.drivers.map((driver) => (
-                      <option key={driver.id} value={driver.id}>
-                        {driver.name} - {driver.email}
-                      </option>
+                      <Input.Item 
+                        key={driver.id} 
+                        label={`${driver.name} - ${driver.email}`}
+                        value={driver.id}
+                      />
                     ))}
                   </Input>
-                </div>
+                </View>
                 
                 {selectedDriver && (
-                  <div className="mb-6 bg-purple-50 rounded-md p-4">
-                    <h4 className="text-sm font-medium text-purple-900 mb-2">Selected Driver Details</h4>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-purple-700">Name:</span>
-                        <span className="ml-2 font-medium">{selectedDriver.name}</span>
-                      </div>
-                      <div>
-                        <span className="text-purple-700">Email:</span>
-                        <span className="ml-2 font-medium">{selectedDriver.email}</span>
-                      </div>
-                      <div>
-                        <span className="text-purple-700">ID Number:</span>
-                        <span className="ml-2 font-medium">{selectedDriver.idNumber}</span>
-                      </div>
-                      <div>
-                        <span className="text-purple-700">Age:</span>
-                        <span className="ml-2 font-medium">{selectedDriver.age || 'N/A'}</span>
-                      </div>
-                    </div>
-                  </div>
+                  <View style={styles.selectedDriverInfo}>
+                    <Text style={styles.selectedDriverTitle}>Selected Driver Details</Text>
+                    <View style={styles.selectedDriverGrid}>
+                      <View style={styles.selectedDriverItem}>
+                        <Text style={styles.selectedDriverLabel}>Name:</Text>
+                        <Text style={styles.selectedDriverValue}>{selectedDriver.name}</Text>
+                      </View>
+                      <View style={styles.selectedDriverItem}>
+                        <Text style={styles.selectedDriverLabel}>Email:</Text>
+                        <Text style={styles.selectedDriverValue}>{selectedDriver.email}</Text>
+                      </View>
+                      <View style={styles.selectedDriverItem}>
+                        <Text style={styles.selectedDriverLabel}>ID Number:</Text>
+                        <Text style={styles.selectedDriverValue}>{selectedDriver.idNumber}</Text>
+                      </View>
+                      <View style={styles.selectedDriverItem}>
+                        <Text style={styles.selectedDriverLabel}>Age:</Text>
+                        <Text style={styles.selectedDriverValue}>{selectedDriver.age || 'N/A'}</Text>
+                      </View>
+                    </View>
+                  </View>
                 )}
 
                 {/* Schedule Summary */}
-                <div className="bg-gray-50 rounded-md p-4 mb-6">
-                  <h4 className="text-sm font-medium text-gray-900 mb-3">Schedule Summary</h4>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div>
-                      <span className="text-gray-500">Vehicle:</span>
-                      <span className="ml-2 font-medium">{selectedVehicle?.name || 'Not selected'}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Driver:</span>
-                      <span className="ml-2 font-medium">{selectedDriver?.name || 'Not selected'}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Start Date:</span>
-                      <span className="ml-2 font-medium">
+                <View style={styles.scheduleSummary}>
+                  <Text style={styles.scheduleSummaryTitle}>Schedule Summary</Text>
+                  <View style={styles.scheduleSummaryGrid}>
+                    <View style={styles.scheduleSummaryItem}>
+                      <Text style={styles.scheduleSummaryLabel}>Vehicle:</Text>
+                      <Text style={styles.scheduleSummaryValue}>{selectedVehicle?.name || 'Not selected'}</Text>
+                    </View>
+                    <View style={styles.scheduleSummaryItem}>
+                      <Text style={styles.scheduleSummaryLabel}>Driver:</Text>
+                      <Text style={styles.scheduleSummaryValue}>{selectedDriver?.name || 'Not selected'}</Text>
+                    </View>
+                    <View style={styles.scheduleSummaryItem}>
+                      <Text style={styles.scheduleSummaryLabel}>Start Date:</Text>
+                      <Text style={styles.scheduleSummaryValue}>
                         {formData.startDate ? new Date(formData.startDate).toLocaleDateString() : 'Not selected'}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">End Date:</span>
-                      <span className="ml-2 font-medium">
+                      </Text>
+                    </View>
+                    <View style={styles.scheduleSummaryItem}>
+                      <Text style={styles.scheduleSummaryLabel}>End Date:</Text>
+                      <Text style={styles.scheduleSummaryValue}>
                         {formData.endDate ? new Date(formData.endDate).toLocaleDateString() : 'Not selected'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                      </Text>
+                    </View>
+                  </View>
+                </View>
                 
                 {/* Notes */}
-                <div>
-                  <Label htmlFor="notes">
-                    Notes (Optional)
-                  </Label>
+                <View style={styles.inputGroup}>
+                  <Label>Notes (Optional)</Label>
                   <Input
                     as="textarea"
-                    id="notes"
-                    name="notes"
                     value={formData.notes}
-                    onChange={handleInputChange}
-                    onKeyDown={handleNotesKeyDown}
-                    rows={4}
+                    onChangeText={(value) => handleInputChange('notes', value)}
                     placeholder="Add any additional notes or special instructions for this schedule..."
+                    rows={4}
+                    editable={!isLoading}
                   />
-                  <p className="mt-1 text-xs text-gray-500">
-                    Press Shift+Enter for new lines. Enter alone will not submit the form.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+                  <Text style={styles.inputHint}>
+                    Add any special instructions or notes for this schedule
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
 
           {/* Form Actions */}
-          <div className="mt-6 flex items-center justify-between">
-            <div>
+          <View style={styles.formActions}>
+            <View style={styles.formActionsLeft}>
               {currentStep > 1 && (
                 <Button
-                  type="button"
-                  onClick={handleBack}
+                  onPress={handleBack}
                   disabled={isLoading}
                   variant="secondary"
                 >
-                  <ChevronLeft className="h-4 w-4 mr-2" />
-                  Back
+                  <View style={styles.buttonContent}>
+                    <MaterialIcons name="chevron-left" size={16} color="#6b7280" />
+                    <Text style={styles.backButtonActionText}>Back</Text>
+                  </View>
                 </Button>
               )}
-            </div>
+            </View>
             
-            <div className="flex items-center space-x-3">
-              <Link
-                to="/vehicle-schedules"
-                className="btn-secondary"
+            <View style={styles.formActionsRight}>
+              <Button
+                onPress={() => navigation.navigate('VehicleSchedules')}
+                variant="secondary"
+                style={styles.actionButton}
               >
                 Cancel
-              </Link>
+              </Button>
               
               {currentStep < 3 ? (
                 <Button
-                  type="button"
-                  onClick={handleNext}
+                  onPress={handleNext}
                   disabled={isLoading || !steps[currentStep - 1]?.unlocked}
                   variant="primary"
+                  style={styles.actionButton}
                 >
-                  Next
-                  <ChevronRight className="h-4 w-4 ml-2" />
+                  <View style={styles.buttonContent}>
+                    <Text style={styles.nextButtonText}>Next</Text>
+                    <MaterialIcons name="chevron-right" size={16} color="white" />
+                  </View>
                 </Button>
               ) : (
                 <Button
-                  type="submit"
+                  onPress={handleSubmit}
                   disabled={isLoading || availableVehicles.length === 0}
                   variant="primary"
-                  className="bg-green-600 hover:bg-green-700 focus:ring-green-500"
+                  style={[styles.actionButton, styles.createButton]}
                 >
                   {isLoading ? (
-                    <>
-                      <LoadingSpinner size="sm" className="text-white mr-2" />
-                      Creating Schedule...
-                    </>
+                    <View style={styles.buttonContent}>
+                      <LoadingSpinner size="sm" color="white" />
+                      <Text style={styles.loadingText}>Creating Schedule...</Text>
+                    </View>
                   ) : (
-                    <>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create Schedule
-                    </>
+                    <View style={styles.buttonContent}>
+                      <MaterialIcons name="add" size={16} color="white" />
+                      <Text style={styles.createButtonText}>Create Schedule</Text>
+                    </View>
                   )}
                 </Button>
               )}
-            </div>
-          </div>
-        </form>
-      </div>
-    </div>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 24,
+  },
+  header: {
+    marginBottom: 24,
+  },
+  headerContent: {
+    gap: 16,
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+  },
+  backButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButtonText: {
+    color: '#6b7280',
+    marginLeft: 4,
+    fontSize: 14,
+  },
+  headerInfo: {
+    gap: 4,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  progressContainer: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  progressContent: {
+    gap: 16,
+  },
+  stepIndicators: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  stepContainer: {
+    flex: 1,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  stepIndicator: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  stepCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepCompleted: {
+    backgroundColor: '#2563eb',
+    borderColor: '#2563eb',
+  },
+  stepActive: {
+    backgroundColor: 'white',
+    borderColor: '#2563eb',
+  },
+  stepUnlocked: {
+    backgroundColor: 'white',
+    borderColor: '#d1d5db',
+  },
+  stepLocked: {
+    backgroundColor: '#f9fafb',
+    borderColor: '#e5e7eb',
+  },
+  stepTitle: {
+    fontSize: 12,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  stepTitleActive: {
+    color: '#2563eb',
+  },
+  stepTitleCompleted: {
+    color: '#111827',
+  },
+  stepTitleUnlocked: {
+    color: '#6b7280',
+  },
+  stepTitleLocked: {
+    color: '#d1d5db',
+  },
+  stepConnector: {
+    position: 'absolute',
+    top: 20,
+    left: '50%',
+    right: '-50%',
+    height: 2,
+    backgroundColor: '#e5e7eb',
+    zIndex: -1,
+  },
+  stepConnectorCompleted: {
+    backgroundColor: '#2563eb',
+  },
+  formContainer: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  formContent: {
+    gap: 24,
+  },
+  stepContent: {
+    gap: 24,
+  },
+  stepHeader: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  inputGroup: {
+    gap: 8,
+  },
+  inputHint: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  errorHint: {
+    fontSize: 12,
+    color: '#ef4444',
+  },
+  selectedVehicleInfo: {
+    backgroundColor: '#eff6ff',
+    borderRadius: 6,
+    padding: 16,
+  },
+  selectedVehicleTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1e40af',
+    marginBottom: 8,
+  },
+  selectedVehicleGrid: {
+    gap: 8,
+  },
+  selectedVehicleItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  selectedVehicleLabel: {
+    fontSize: 14,
+    color: '#1e40af',
+  },
+  selectedVehicleValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+    textTransform: 'capitalize',
+  },
+  maintenanceWarning: {
+    color: '#d97706',
+  },
+  maintenanceNotice: {
+    backgroundColor: '#fffbeb',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    borderRadius: 6,
+    padding: 12,
+    marginTop: 12,
+  },
+  maintenanceNoticeText: {
+    fontSize: 14,
+    color: '#92400e',
+  },
+  maintenanceNoticeBold: {
+    fontWeight: 'bold',
+  },
+  dateRangeGrid: {
+    gap: 16,
+  },
+  durationInfo: {
+    backgroundColor: '#f0fdf4',
+    borderRadius: 6,
+    padding: 16,
+  },
+  durationTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#166534',
+    marginBottom: 4,
+  },
+  durationValue: {
+    fontSize: 14,
+    color: '#166534',
+  },
+  selectedDriverInfo: {
+    backgroundColor: '#faf5ff',
+    borderRadius: 6,
+    padding: 16,
+  },
+  selectedDriverTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#7c3aed',
+    marginBottom: 8,
+  },
+  selectedDriverGrid: {
+    gap: 8,
+  },
+  selectedDriverItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  selectedDriverLabel: {
+    fontSize: 14,
+    color: '#7c3aed',
+  },
+  selectedDriverValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  scheduleSummary: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 6,
+    padding: 16,
+  },
+  scheduleSummaryTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+    marginBottom: 12,
+  },
+  scheduleSummaryGrid: {
+    gap: 8,
+  },
+  scheduleSummaryItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  scheduleSummaryLabel: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  scheduleSummaryValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  formActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 24,
+  },
+  formActionsLeft: {
+    flex: 1,
+  },
+  formActionsRight: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  actionButton: {
+    minWidth: 80,
+  },
+  createButton: {
+    backgroundColor: '#10b981',
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backButtonActionText: {
+    color: '#6b7280',
+    marginLeft: 4,
+  },
+  nextButtonText: {
+    color: 'white',
+    marginRight: 4,
+  },
+  loadingText: {
+    color: 'white',
+    marginLeft: 8,
+  },
+  createButtonText: {
+    color: 'white',
+    marginLeft: 8,
+  },
+});

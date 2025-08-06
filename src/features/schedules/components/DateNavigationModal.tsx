@@ -1,10 +1,12 @@
 import React from 'react';
-import { X, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { View, Text, StyleSheet } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { addDaysToDate, formatGanttDate } from '../../../utils/dateUtils';
 import { Button } from '../../../components/ui/Button';
 import { Label } from '../../../components/ui/Label';
 import { Input } from '../../../components/ui/Input';
+import { Modal } from '../../../components/ui/Modal';
 
 interface DateNavigationModalProps {
   isOpen: boolean;
@@ -31,117 +33,191 @@ export function DateNavigationModal({
 }: DateNavigationModalProps) {
   if (!isOpen) return null;
 
+  // Handle date input change for React Native
+  const handleDateChange = (value: string) => {
+    // Create a synthetic event object to match the web interface
+    const syntheticEvent = {
+      target: { value }
+    } as React.ChangeEvent<HTMLInputElement>;
+    onStartDateChange(syntheticEvent);
+  };
+
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
-      <div className="relative bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-96 overflow-y-auto">
-        <div className="px-4 py-5 sm:p-6">
-          {/* Modal Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center">
-              <Calendar className="h-5 w-5 text-gray-400 mr-2" />
-              <h3 className="text-lg font-medium text-gray-900">Date Navigation</h3>
-            </div>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
-            >
-              <X className="h-6 w-6" />
-            </button>
-          </div>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      headerContent={
+        <View style={styles.headerContent}>
+          <MaterialIcons name="event" size={20} color="#6b7280" />
+          <Text style={styles.headerTitle}>Date Navigation</Text>
+        </View>
+      }
+      footerContent={
+        <Button
+          onPress={onClose}
+          variant="primary"
+        >
+          Apply Changes
+        </Button>
+      }
+    >
+      <View style={styles.content}>
+        {/* Date Navigation Content */}
+        <View style={styles.navigationGrid}>
+          {/* Date Selection */}
+          <View style={styles.dateSection}>
+            <Label>Start Date</Label>
+            <Input
+              value={format(currentStartDate, 'yyyy-MM-dd')}
+              onChangeText={handleDateChange}
+              placeholder="YYYY-MM-DD"
+            />
+            <Text style={styles.inputHint}>Format: YYYY-MM-DD</Text>
+          </View>
 
-          {/* Date Navigation Content */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            {/* Date Selection */}
-            <div>
-              <Label htmlFor="startDate">
-                Start Date
-              </Label>
-              <Input
-                type="date"
-                id="startDate"
-                value={format(currentStartDate, 'yyyy-MM-dd')}
-                onChange={onStartDateChange}
-              />
-            </div>
-
-            {/* Days to Show Selection */}
-            <div>
-              <Label>
-                View Duration
-              </Label>
-              <div className="flex space-x-2">
-                {[
-                  { value: 7, label: '1 Week' },
-                  { value: 14, label: '2 Weeks' },
-                  { value: 30, label: '1 Month' }
-                ].map((option) => (
-                  <Button
-                    key={option.value}
-                    onClick={() => onDaysToShowChange(option.value)}
-                    variant={daysToShow === option.value ? 'primary' : 'secondary'}
-                    className={`px-3 py-2 ${
-                      daysToShow === option.value
-                        ? ''
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {option.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {/* Navigation Controls */}
-            <div>
-              <Label>
-                Quick Navigation
-              </Label>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={onPreviousWeek}
-                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-200"
-                  title="Previous week"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                
+          {/* Days to Show Selection */}
+          <View style={styles.durationSection}>
+            <Label>View Duration</Label>
+            <View style={styles.durationButtons}>
+              {[
+                { value: 7, label: '1 Week' },
+                { value: 14, label: '2 Weeks' },
+                { value: 30, label: '1 Month' }
+              ].map((option) => (
                 <Button
-                  onClick={onGoToToday}
-                  variant="secondary"
-                  className="px-3 py-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                  key={option.value}
+                  onPress={() => onDaysToShowChange(option.value)}
+                  variant={daysToShow === option.value ? 'primary' : 'secondary'}
+                  style={[
+                    styles.durationButton,
+                    daysToShow === option.value ? styles.selectedDurationButton : styles.unselectedDurationButton
+                  ]}
                 >
-                  Today
+                  {option.label}
                 </Button>
-                
-                <button
-                  onClick={onNextWeek}
-                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-200"
-                  title="Next week"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          </div>
+              ))}
+            </View>
+          </View>
 
-          {/* Current Range Display */}
-          <div className="mt-6 pt-4 border-t border-gray-200">
-            <div className="text-sm text-gray-600">
-              <span className="font-medium">Current Range:</span> {formatGanttDate(currentStartDate)} - {formatGanttDate(addDaysToDate(currentStartDate, daysToShow - 1))}
-            </div>
-          </div>
+          {/* Navigation Controls */}
+          <View style={styles.navigationSection}>
+            <Label>Quick Navigation</Label>
+            <View style={styles.navigationControls}>
+              <Button
+                onPress={onPreviousWeek}
+                variant="secondary"
+                style={styles.navButton}
+              >
+                <View style={styles.navButtonContent}>
+                  <MaterialIcons name="chevron-left" size={16} color="#6b7280" />
+                </View>
+              </Button>
+              
+              <Button
+                onPress={onGoToToday}
+                variant="secondary"
+                style={[styles.navButton, styles.todayButton]}
+              >
+                Today
+              </Button>
+              
+              <Button
+                onPress={onNextWeek}
+                variant="secondary"
+                style={styles.navButton}
+              >
+                <View style={styles.navButtonContent}>
+                  <MaterialIcons name="chevron-right" size={16} color="#6b7280" />
+                </View>
+              </Button>
+            </View>
+          </View>
+        </View>
 
-          {/* Modal Actions */}
-          <div className="mt-6 flex items-center justify-end pt-4 border-t border-gray-200">
-            <Button
-              onClick={onClose}
-              variant="primary"
-            >
-              Apply Changes
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
+        {/* Current Range Display */}
+        <View style={styles.currentRange}>
+          <Text style={styles.currentRangeLabel}>
+            <Text style={styles.currentRangeBold}>Current Range:</Text> {formatGanttDate(currentStartDate)} - {formatGanttDate(addDaysToDate(currentStartDate, daysToShow - 1))}
+          </Text>
+        </View>
+      </View>
+    </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+    marginLeft: 8,
+  },
+  content: {
+    gap: 24,
+  },
+  navigationGrid: {
+    gap: 24,
+  },
+  dateSection: {
+    gap: 8,
+  },
+  inputHint: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  durationSection: {
+    gap: 8,
+  },
+  durationButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  durationButton: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  selectedDurationButton: {
+    backgroundColor: '#2563eb',
+  },
+  unselectedDurationButton: {
+    backgroundColor: '#f3f4f6',
+  },
+  navigationSection: {
+    gap: 8,
+  },
+  navigationControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  navButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    minWidth: 40,
+  },
+  navButtonContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  todayButton: {
+    flex: 1,
+    backgroundColor: '#eff6ff',
+  },
+  currentRange: {
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  currentRangeLabel: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  currentRangeBold: {
+    fontWeight: '500',
+  },
+});

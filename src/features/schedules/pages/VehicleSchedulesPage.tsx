@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Filter, Calendar, Truck, User, FileText, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, X, RotateCcw, Trash2, AlertTriangle } from 'lucide-react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../../../hooks/useAuth';
 import { useVehicleSchedulesData } from '../hooks/useVehicleSchedulesData';
 import { LoadingSpinner } from '../../../components/ui/LoadingSpinner';
@@ -8,12 +9,14 @@ import { vehicleScheduleService } from '../../../services/apiService';
 import { VehicleSchedule } from '../../../types';
 import { getDaysBetweenDates, parseDate, parseDateEnd, formatTooltipDate } from '../../../utils/dateUtils';
 import { Button } from '../../../components/ui/Button';
-
 import { Badge } from '../../../components/ui/Badge';
+import { Modal } from '../../../components/ui/Modal';
+import { Input } from '../../../components/ui/Input';
+import { Label } from '../../../components/ui/Label';
 
 export function VehicleSchedulesPage() {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const navigation = useNavigation();
   const [showFilterModal, setShowFilterModal] = useState(false);
   
   const {
@@ -69,8 +72,6 @@ export function VehicleSchedulesPage() {
 
   // Get vehicle name by ID (from backend response)
   const getVehicleName = (vehicleId: string): string => {
-    // Note: The backend should include vehicle details in the response
-    // For now, we'll use the vehicleId as fallback
     const schedule = vehicleSchedules.find(s => s.vehicleId === vehicleId);
     return (schedule as any)?.vehicle?.name || `Vehicle ${vehicleId.slice(0, 8)}...`;
   };
@@ -96,47 +97,9 @@ export function VehicleSchedulesPage() {
     return `${diffDays} day${diffDays !== 1 ? 's' : ''}`;
   };
 
-  // Render sort icon
-  const renderSortIcon = (column: string) => {
-    if (sortBy !== column) {
-      return <ChevronUp className="h-4 w-4 text-gray-300" />;
-    }
-    return sortOrder === 'asc' 
-      ? <ChevronUp className="h-4 w-4 text-blue-600" />
-      : <ChevronDown className="h-4 w-4 text-blue-600" />;
-  };
-
-  // Handle page change
-  const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  };
-
-  // Generate page numbers for pagination
-  const getPageNumbers = () => {
-    const pages = [];
-    const maxVisiblePages = 5;
-    
-    if (totalPages <= maxVisiblePages) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      const startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-      const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-      
-      for (let i = startPage; i <= endPage; i++) {
-        pages.push(i);
-      }
-    }
-    
-    return pages;
-  };
-
   // Handler for create schedule button
   const handleCreateSchedule = () => {
-    navigate('/vehicle-schedules/new');
+    navigation.navigate('AddVehicleSchedule');
   };
 
   const handleEditSchedule = (scheduleId: string) => {
@@ -187,615 +150,933 @@ export function VehicleSchedulesPage() {
 
   if (error) {
     return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Vehicle Schedules</h1>
-            <p className="mt-1 text-sm text-gray-600">Manage vehicle assignments and schedules</p>
-          </div>
-        </div>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Vehicle Schedules</Text>
+          <Text style={styles.headerSubtitle}>Manage vehicle assignments and schedules</Text>
+        </View>
         
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div className="text-red-800">
-              <h3 className="font-medium">Error loading vehicle schedules</h3>
-              <p className="text-sm mt-1">{error}</p>
-            </div>
-            <button
-              onClick={refreshData}
-              className="text-red-600 hover:text-red-700 transition-colors duration-200"
-            >
-              <RotateCcw className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-      </div>
+        <View style={styles.errorContainer}>
+          <View style={styles.errorContent}>
+            <Text style={styles.errorTitle}>Error loading vehicle schedules</Text>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+          <TouchableOpacity
+            onPress={refreshData}
+            style={styles.retryButton}
+            activeOpacity={0.7}
+          >
+            <MaterialIcons name="refresh" size={20} color="#ef4444" />
+          </TouchableOpacity>
+        </View>
+      </View>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <View style={styles.container}>
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Vehicle Schedules</h1>
-          <p className="mt-1 text-sm text-gray-600">
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>Vehicle Schedules</Text>
+          <Text style={styles.headerSubtitle}>
             Manage vehicle assignments and schedules
-          </p>
-        </div>
-        <div className="flex items-center space-x-3">
+          </Text>
+        </View>
+        <View style={styles.headerActions}>
           {/* Filter Button */}
           <Button
-            onClick={() => setShowFilterModal(true)}
+            onPress={() => setShowFilterModal(true)}
             variant="secondary"
+            style={styles.filterButton}
           >
-            <Filter className="h-4 w-4 mr-2" />
-            Filters
-            {(searchTerm || statusFilters.length > 0) && (
-              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                Active
-              </span>
-            )}
+            <View style={styles.filterButtonContent}>
+              <MaterialIcons name="filter-list" size={16} color="#374151" />
+              <Text style={styles.filterButtonText}>Filters</Text>
+              {(searchTerm || statusFilters.length > 0) && (
+                <View style={styles.activeFilterBadge}>
+                  <Text style={styles.activeFilterText}>Active</Text>
+                </View>
+              )}
+            </View>
           </Button>
           
           {/* Create Schedule Button */}
           {user?.isAdmin && (
             <Button
-              onClick={handleCreateSchedule}
+              onPress={handleCreateSchedule}
               variant="primary"
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Create Schedule
+              <View style={styles.addButtonContent}>
+                <MaterialIcons name="add" size={16} color="white" />
+                <Text style={styles.addButtonText}>Create Schedule</Text>
+              </View>
             </Button>
           )}
-        </div>
-      </div>
+        </View>
+      </View>
 
       {/* Filter Modal */}
       {showFilterModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
-          <div className="relative bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-96 overflow-y-auto">
-            <div className="px-4 py-5 sm:p-6">
-              {/* Modal Header */}
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center">
-                  <Filter className="h-5 w-5 text-gray-400 mr-2" />
-                  <h3 className="text-lg font-medium text-gray-900">Search & Filter Vehicle Schedules</h3>
-                </div>
-                <button
-                  onClick={() => setShowFilterModal(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-
-              {/* Filter Content */}
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                {/* Search */}
-                <div className="lg:col-span-2">
-                  <label htmlFor="search-schedules" className="block text-sm font-medium text-gray-700 mb-1">
-                    Search Schedules
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Search className="h-4 w-4 text-gray-400" />
-                    </div>
-                    <input
-                      type="text"
-                      id="search-schedules"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      placeholder="Search by vehicle, driver, or notes..."
-                    />
-                  </div>
-                </div>
-                
-                {/* Status Filter */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Status Filter
-                  </label>
-                  <div className="space-y-2">
-                    {[
-                      { value: 'scheduled', label: 'Scheduled' },
-                      { value: 'active', label: 'Active' },
-                      { value: 'completed', label: 'Completed' }
-                    ].map((status) => (
-                      <label key={status.value} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={statusFilters.includes(status.value)}
-                          onChange={() => toggleStatusFilter(status.value)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <span className="ml-2 text-sm text-gray-700">{status.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Modal Actions */}
-              <div className="mt-6 flex items-center justify-between pt-4 border-t border-gray-200">
-                <div>
-                  {(searchTerm || statusFilters.length > 0) && (
-                    <Button
-                      onClick={handleClearAllFilters}
-                      variant="secondary"
-                      className="px-3 py-2"
-                    >
-                      <X className="h-4 w-4 mr-2" />
-                      Clear All Filters
-                    </Button>
-                  )}
-                </div>
+        <Modal
+          isOpen={showFilterModal}
+          onClose={() => setShowFilterModal(false)}
+          headerContent={
+            <View style={styles.modalHeaderContent}>
+              <MaterialIcons name="filter-list" size={20} color="#6b7280" />
+              <Text style={styles.modalHeaderTitle}>Search & Filter Vehicle Schedules</Text>
+            </View>
+          }
+          footerContent={
+            <View style={styles.modalFooterContent}>
+              {(searchTerm || statusFilters.length > 0) && (
                 <Button
-                  onClick={() => setShowFilterModal(false)}
-                  variant="primary"
+                  onPress={handleClearAllFilters}
+                  variant="secondary"
+                  style={styles.modalFooterButton}
                 >
-                  Apply Filters
+                  <View style={styles.buttonContent}>
+                    <MaterialIcons name="clear" size={16} color="#374151" />
+                    <Text style={styles.clearFiltersText}>Clear All Filters</Text>
+                  </View>
                 </Button>
-              </div>
-            </div>
-          </div>
-        </div>
+              )}
+              <Button
+                onPress={() => setShowFilterModal(false)}
+                variant="primary"
+                style={styles.modalFooterButton}
+              >
+                Apply Filters
+              </Button>
+            </View>
+          }
+        >
+          <View style={styles.filterContent}>
+            {/* Search */}
+            <View style={styles.filterSection}>
+              <Label>Search Schedules</Label>
+              <View style={styles.searchInputWrapper}>
+                <View style={styles.searchIcon}>
+                  <MaterialIcons name="search" size={16} color="#9ca3af" />
+                </View>
+                <Input
+                  value={searchTerm}
+                  onChangeText={setSearchTerm}
+                  placeholder="Search by vehicle, driver, or notes..."
+                  style={styles.searchInput}
+                />
+              </View>
+            </View>
+            
+            {/* Status Filter */}
+            <View style={styles.filterSection}>
+              <Label>Status Filter</Label>
+              <View style={styles.checkboxGroup}>
+                {[
+                  { value: 'scheduled', label: 'Scheduled' },
+                  { value: 'active', label: 'Active' },
+                  { value: 'completed', label: 'Completed' }
+                ].map((status) => (
+                  <TouchableOpacity
+                    key={status.value}
+                    style={styles.checkboxItem}
+                    onPress={() => toggleStatusFilter(status.value)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[
+                      styles.checkbox,
+                      statusFilters.includes(status.value) && styles.checkboxChecked
+                    ]}>
+                      {statusFilters.includes(status.value) && (
+                        <MaterialIcons name="check" size={16} color="white" />
+                      )}
+                    </View>
+                    <Text style={styles.checkboxLabel}>{status.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </View>
+        </Modal>
       )}
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="bg-green-500 p-3 rounded-md">
-                  <Truck className="h-6 w-6 text-white" />
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Active Schedules</dt>
-                  <dd className="text-lg font-medium text-gray-900">{activeCount}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
+      <View style={styles.summaryStats}>
+        <View style={styles.statCard}>
+          <View style={styles.statContent}>
+            <View style={[styles.statIcon, { backgroundColor: '#10b981' }]}>
+              <MaterialCommunityIcons name="truck" size={24} color="white" />
+            </View>
+            <View style={styles.statInfo}>
+              <Text style={styles.statLabel}>Active Schedules</Text>
+              <Text style={styles.statValue}>{activeCount}</Text>
+            </View>
+          </View>
+        </View>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="bg-blue-500 p-3 rounded-md">
-                  <Calendar className="h-6 w-6 text-white" />
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Scheduled</dt>
-                  <dd className="text-lg font-medium text-gray-900">{scheduledCount}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+        <View style={styles.statCard}>
+          <View style={styles.statContent}>
+            <View style={[styles.statIcon, { backgroundColor: '#3b82f6' }]}>
+              <MaterialIcons name="event" size={24} color="white" />
+            </View>
+            <View style={styles.statInfo}>
+              <Text style={styles.statLabel}>Scheduled</Text>
+              <Text style={styles.statValue}>{scheduledCount}</Text>
+            </View>
+          </View>
+        </View>
+      </View>
 
       {/* Results Summary */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-3 sm:px-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <h3 className="text-lg font-medium text-gray-900">
-                Vehicle Schedules ({totalCount})
-              </h3>
-              {loading && <LoadingSpinner size="sm" />}
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              {/* Items per page */}
-              <div className="flex items-center space-x-2">
-                <label htmlFor="itemsPerPage" className="text-sm text-gray-700">
-                  Show:
-                </label>
-                <select
-                  id="itemsPerPage"
-                  value={itemsPerPage}
-                  onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                  className="border border-gray-300 rounded-md text-sm py-1 px-2 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value={6}>6</option>
-                  <option value={12}>12</option>
-                  <option value={24}>24</option>
-                  <option value={50}>50</option>
-                </select>
-              </div>
-              
-              {totalCount > 0 && (
-                <div className="text-sm text-gray-500">
-                  Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Schedules Table */}
-        <div className="overflow-x-auto">
-          {vehicleSchedules.length > 0 ? (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-200"
-                    onClick={() => setSorting('vehicleName')}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <span>Vehicle</span>
-                      {renderSortIcon('vehicleName')}
-                    </div>
-                  </th>
-                  <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-200"
-                    onClick={() => setSorting('driverName')}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <span>Driver</span>
-                      {renderSortIcon('driverName')}
-                    </div>
-                  </th>
-                  <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-200"
-                    onClick={() => setSorting('startDate')}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <span>Start Date</span>
-                      {renderSortIcon('startDate')}
-                    </div>
-                  </th>
-                  <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-200"
-                    onClick={() => setSorting('endDate')}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <span>End Date</span>
-                      {renderSortIcon('endDate')}
-                    </div>
-                  </th>
-                  <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-200"
-                    onClick={() => setSorting('duration')}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <span>Duration</span>
-                      {renderSortIcon('duration')}
-                    </div>
-                  </th>
-                  <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-200"
-                    onClick={() => setSorting('status')}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <span>Status</span>
-                      {renderSortIcon('status')}
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {vehicleSchedules.map((schedule) => (
-                  <tr key={schedule.id} className="hover:bg-gray-50 transition-colors duration-150">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {getVehicleName(schedule.vehicleId)}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {getVehicleDetails(schedule.vehicleId)}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-8 w-8">
-                          <div className="bg-purple-100 h-8 w-8 rounded-full flex items-center justify-center">
-                            <User className="h-4 w-4 text-purple-600" />
-                          </div>
-                        </div>
-                        <div className="ml-3">
-                          <div className="text-sm font-medium text-gray-900">
-                            {getDriverName(schedule.driverId)}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatTooltipDate(schedule.startDate)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatTooltipDate(schedule.endDate)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {getScheduleDuration(schedule.startDate, schedule.endDate)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge 
-                        type={schedule.status === 'active' ? 'green' : schedule.status === 'scheduled' ? 'blue' : 'gray'} 
-                        label={schedule.status === 'active' ? 'Active' : schedule.status === 'scheduled' ? 'Scheduled' : 'Completed'} 
-                      />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex justify-end space-x-2">
-                        {schedule.notes && (
-                          <button
-                            onClick={() => handleViewNotes(schedule.id)}
-                            className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded transition-colors duration-200"
-                            title="View Notes"
-                          >
-                            <FileText className="h-4 w-4" />
-                          </button>
-                        )}
-                        {user?.isAdmin && (
-                          <>
-                            <button
-                              onClick={() => handleEditSchedule(schedule.id)}
-                              className="text-gray-600 hover:text-gray-900 p-1 hover:bg-gray-50 rounded transition-colors duration-200"
-                              title="Edit Schedule"
-                            >
-                              <FileText className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteSchedule(schedule.id)}
-                              className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded transition-colors duration-200"
-                              title="Delete Schedule"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <div className="text-center py-12">
-              <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <div className="text-gray-500 mb-4">
-                {loading ? 'Loading vehicle schedules...' : 
-                 (searchTerm || statusFilters.length !== 2 || !statusFilters.includes('active') || !statusFilters.includes('scheduled')) ? 
-                 'No schedules match your filters' : 'No vehicle schedules found'}
-              </div>
-              {!loading && (searchTerm || statusFilters.length !== 2 || !statusFilters.includes('active') || !statusFilters.includes('scheduled')) && (
-                <button
-                  onClick={handleClearAllFilters}
-                  className="text-blue-600 hover:text-blue-700 transition-colors duration-200"
-                >
-                  Clear filters
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-            <div className="flex-1 flex justify-between sm:hidden">
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={!hasPreviousPage || loading}
-                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Previous
-              </button>
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={!hasNextPage || loading}
-                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
-            </div>
-            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm text-gray-700">
-                  Showing <span className="font-medium">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
-                  <span className="font-medium">{Math.min(currentPage * itemsPerPage, totalCount)}</span> of{' '}
-                  <span className="font-medium">{totalCount}</span> results
-                </p>
-              </div>
-              <div>
-                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                  <button
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={!hasPreviousPage || loading}
-                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <span className="sr-only">Previous</span>
-                    <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-                  </button>
-                  
-                  {getPageNumbers().map((pageNumber) => (
-                    <button
-                      key={pageNumber}
-                      onClick={() => handlePageChange(pageNumber)}
-                      disabled={loading}
-                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                        currentPage === pageNumber
-                          ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                          : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
-                    >
-                      {pageNumber}
-                    </button>
-                  ))}
-                  
-                  <button
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={!hasNextPage || loading}
-                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <span className="sr-only">Next</span>
-                    <ChevronRight className="h-5 w-5" aria-hidden="true" />
-                  </button>
-                </nav>
-              </div>
-            </div>
-          </div>
+      <View style={styles.resultsHeader}>
+        <View style={styles.resultsInfo}>
+          <Text style={styles.resultsTitle}>Vehicle Schedules ({totalCount})</Text>
+          {loading && <LoadingSpinner size="sm" />}
+        </View>
+        
+        {totalCount > 0 && (
+          <Text style={styles.resultsCount}>
+            Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount}
+          </Text>
         )}
-      </div>
+      </View>
+
+      {/* Schedules List */}
+      <ScrollView 
+        style={styles.schedulesList}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={refreshData} />
+        }
+      >
+        {vehicleSchedules.length > 0 ? (
+          vehicleSchedules.map((schedule) => (
+            <View key={schedule.id} style={styles.scheduleCard}>
+              <View style={styles.scheduleHeader}>
+                <View style={styles.scheduleInfo}>
+                  <Text style={styles.vehicleName}>{getVehicleName(schedule.vehicleId)}</Text>
+                  <Text style={styles.vehicleDetails}>{getVehicleDetails(schedule.vehicleId)}</Text>
+                </View>
+                <Badge 
+                  type={schedule.status === 'active' ? 'green' : schedule.status === 'scheduled' ? 'blue' : 'gray'} 
+                  label={schedule.status === 'active' ? 'Active' : schedule.status === 'scheduled' ? 'Scheduled' : 'Completed'} 
+                />
+              </View>
+              
+              <View style={styles.scheduleDetails}>
+                <View style={styles.driverInfo}>
+                  <View style={styles.driverAvatar}>
+                    <MaterialCommunityIcons name="account" size={16} color="#8b5cf6" />
+                  </View>
+                  <Text style={styles.driverName}>{getDriverName(schedule.driverId)}</Text>
+                </View>
+                
+                <View style={styles.scheduleMetrics}>
+                  <View style={styles.metricItem}>
+                    <Text style={styles.metricLabel}>Start Date</Text>
+                    <Text style={styles.metricValue}>{formatTooltipDate(schedule.startDate)}</Text>
+                  </View>
+                  <View style={styles.metricItem}>
+                    <Text style={styles.metricLabel}>End Date</Text>
+                    <Text style={styles.metricValue}>{formatTooltipDate(schedule.endDate)}</Text>
+                  </View>
+                  <View style={styles.metricItem}>
+                    <Text style={styles.metricLabel}>Duration</Text>
+                    <Text style={styles.metricValue}>{getScheduleDuration(schedule.startDate, schedule.endDate)}</Text>
+                  </View>
+                </View>
+              </View>
+
+              {user?.isAdmin && (
+                <View style={styles.scheduleActions}>
+                  {schedule.notes && (
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={() => handleViewNotes(schedule.id)}
+                      activeOpacity={0.7}
+                    >
+                      <MaterialIcons name="description" size={16} color="#2563eb" />
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => handleEditSchedule(schedule.id)}
+                    activeOpacity={0.7}
+                  >
+                    <MaterialIcons name="edit" size={16} color="#6b7280" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => handleDeleteSchedule(schedule.id)}
+                    activeOpacity={0.7}
+                  >
+                    <MaterialIcons name="delete" size={16} color="#ef4444" />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          ))
+        ) : (
+          <View style={styles.emptyState}>
+            <MaterialIcons name="event" size={48} color="#9ca3af" />
+            <Text style={styles.emptyStateText}>
+              {loading ? 'Loading vehicle schedules...' : 
+               (searchTerm || statusFilters.length !== 2 || !statusFilters.includes('active') || !statusFilters.includes('scheduled')) ? 
+               'No schedules match your filters' : 'No vehicle schedules found'}
+            </Text>
+            {!loading && (searchTerm || statusFilters.length !== 2 || !statusFilters.includes('active') || !statusFilters.includes('scheduled')) && (
+              <Button
+                onPress={handleClearAllFilters}
+                variant="secondary"
+              >
+                Clear filters
+              </Button>
+            )}
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <View style={styles.pagination}>
+          <TouchableOpacity
+            style={[styles.paginationButton, (!hasPreviousPage || loading) && styles.disabledButton]}
+            onPress={() => setCurrentPage(currentPage - 1)}
+            disabled={!hasPreviousPage || loading}
+            activeOpacity={0.7}
+          >
+            <MaterialIcons name="chevron-left" size={20} color={(!hasPreviousPage || loading) ? "#9ca3af" : "#374151"} />
+            <Text style={[styles.paginationButtonText, (!hasPreviousPage || loading) && styles.disabledText]}>
+              Previous
+            </Text>
+          </TouchableOpacity>
+          
+          <View style={styles.pageInfo}>
+            <Text style={styles.pageText}>
+              Page {currentPage} of {totalPages}
+            </Text>
+          </View>
+          
+          <TouchableOpacity
+            style={[styles.paginationButton, (!hasNextPage || loading) && styles.disabledButton]}
+            onPress={() => setCurrentPage(currentPage + 1)}
+            disabled={!hasNextPage || loading}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.paginationButtonText, (!hasNextPage || loading) && styles.disabledText]}>
+              Next
+            </Text>
+            <MaterialIcons name="chevron-right" size={20} color={(!hasNextPage || loading) ? "#9ca3af" : "#374151"} />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Notes Modal */}
       {showNotesModal && selectedSchedule && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
-          <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <FileText className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <div className="ml-3">
-                    <h3 className="text-lg font-medium text-gray-900">Schedule Notes</h3>
-                    <p className="text-sm text-gray-500">
-                      {getVehicleName(selectedSchedule.vehicleId)} - {getDriverName(selectedSchedule.driverId)}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowNotesModal(null)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-              
-              <div className="bg-gray-50 rounded-md p-4 mb-4">
-                <p className="text-sm text-gray-900 whitespace-pre-wrap">
-                  {selectedSchedule.notes || 'No notes available for this schedule.'}
-                </p>
-              </div>
+        <Modal
+          isOpen={!!showNotesModal}
+          onClose={() => setShowNotesModal(null)}
+          headerContent={
+            <View style={styles.notesModalHeader}>
+              <MaterialIcons name="description" size={20} color="#2563eb" />
+              <View style={styles.notesModalHeaderText}>
+                <Text style={styles.notesModalTitle}>Schedule Notes</Text>
+                <Text style={styles.notesModalSubtitle}>
+                  {getVehicleName(selectedSchedule.vehicleId)} - {getDriverName(selectedSchedule.driverId)}
+                </Text>
+              </View>
+            </View>
+          }
+        >
+          <View style={styles.notesModalContent}>
+            <View style={styles.notesContent}>
+              <Text style={styles.notesText}>
+                {selectedSchedule.notes || 'No notes available for this schedule.'}
+              </Text>
+            </View>
 
-              <div className="bg-blue-50 rounded-md p-3 mb-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Status:</span>
-                  <Badge 
-                    type={selectedSchedule.status === 'active' ? 'green' : selectedSchedule.status === 'scheduled' ? 'blue' : 'gray'} 
-                    label={selectedSchedule.status === 'active' ? 'Active' : selectedSchedule.status === 'scheduled' ? 'Scheduled' : 'Completed'} 
-                  />
-                </div>
-              </div>
-              
-              <div className="flex justify-end">
-                <button
-                  onClick={() => setShowNotesModal(null)}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+            <View style={styles.notesStatusInfo}>
+              <View style={styles.notesStatusItem}>
+                <Text style={styles.notesStatusLabel}>Status:</Text>
+                <Badge 
+                  type={selectedSchedule.status === 'active' ? 'green' : selectedSchedule.status === 'scheduled' ? 'blue' : 'gray'} 
+                  label={selectedSchedule.status === 'active' ? 'Active' : selectedSchedule.status === 'scheduled' ? 'Scheduled' : 'Completed'} 
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
       )}
 
       {/* Delete Confirmation Modal */}
       {deleteModal.isOpen && deleteModal.schedule && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
-          <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="p-6">
-              <div className="flex items-center mb-4">
-                <div className="flex-shrink-0">
-                  <AlertTriangle className="h-6 w-6 text-red-600" />
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-lg font-medium text-gray-900">Delete Vehicle Schedule</h3>
-                </div>
-              </div>
-              
-              <div className="mb-6">
-                {deleteModal.isActiveSchedule ? (
-                  <div className="mb-4">
-                    <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
-                      <div className="flex">
-                        <div className="flex-shrink-0">
-                          <AlertTriangle className="h-5 w-5 text-red-400" />
-                        </div>
-                        <div className="ml-3">
-                          <p className="text-sm font-medium text-red-800">
-                            <strong>Warning:</strong> You are about to delete an active schedule. This action cannot be undone.
-                          </p>
-                          <p className="text-sm text-red-700 mt-1">
-                            Are you sure you want to proceed?
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+        <Modal
+          isOpen={deleteModal.isOpen}
+          onClose={() => setDeleteModal({ isOpen: false, schedule: null, isActiveSchedule: false })}
+          headerContent={
+            <View style={styles.deleteModalHeader}>
+              <MaterialIcons name="warning" size={20} color="#ef4444" />
+              <Text style={styles.deleteModalTitle}>Delete Vehicle Schedule</Text>
+            </View>
+          }
+          footerContent={
+            <View style={styles.deleteModalFooter}>
+              <Button
+                onPress={() => setDeleteModal({ isOpen: false, schedule: null, isActiveSchedule: false })}
+                disabled={isDeleting}
+                variant="secondary"
+                style={styles.modalFooterButton}
+              >
+                Cancel
+              </Button>
+              <Button
+                onPress={confirmDeleteSchedule}
+                disabled={isDeleting}
+                variant="danger"
+                style={styles.modalFooterButton}
+              >
+                {isDeleting ? (
+                  <View style={styles.buttonContent}>
+                    <LoadingSpinner size="sm" color="white" />
+                    <Text style={styles.deletingText}>Deleting...</Text>
+                  </View>
                 ) : (
-                  <p className="text-sm text-gray-600 mb-4">
-                    <strong>Warning:</strong> This action cannot be undone. Are you sure you want to permanently delete this schedule?
-                  </p>
-                )}
-                
-                <div className="bg-gray-50 rounded-md p-3">
-                  <div className="text-sm">
-                    <p className="font-medium text-gray-900">
-                      {getVehicleName(deleteModal.schedule.vehicleId)} - {getDriverName(deleteModal.schedule.driverId)}
-                    </p>
-                    <p className="text-gray-500 mt-1">
-                      {formatTooltipDate(deleteModal.schedule.startDate)} - {formatTooltipDate(deleteModal.schedule.endDate)}
-                    </p>
-                    <div className="mt-2">
-                      <Badge 
-                        type={deleteModal.schedule.status === 'active' ? 'green' : deleteModal.schedule.status === 'scheduled' ? 'blue' : 'gray'} 
-                        label={deleteModal.schedule.status === 'active' ? 'Active' : deleteModal.schedule.status === 'scheduled' ? 'Scheduled' : 'Completed'} 
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-end space-x-3">
-                <button
-                  onClick={() => setDeleteModal({ isOpen: false, schedule: null, isActiveSchedule: false })}
-                  disabled={isDeleting}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmDeleteSchedule}
-                  disabled={isDeleting}
-                  className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 ${
-                    deleteModal.isActiveSchedule 
-                      ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' 
-                      : 'bg-red-600 hover:bg-red-700 focus:ring-red-500'
-                  }`}
-                >
-                  {isDeleting ? (
-                    <>
-                      <LoadingSpinner size="sm" className="text-white mr-2" />
-                      Deleting...
-                    </>
-                  ) : (
-                    <>
-                      <Trash2 className="h-4 w-4 mr-2" />
+                  <View style={styles.buttonContent}>
+                    <MaterialIcons name="delete" size={16} color="white" />
+                    <Text style={styles.deleteButtonText}>
                       {deleteModal.isActiveSchedule ? 'Delete Active Schedule' : 'Confirm Delete'}
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+                    </Text>
+                  </View>
+                )}
+              </Button>
+            </View>
+          }
+        >
+          <View style={styles.deleteModalContent}>
+            {deleteModal.isActiveSchedule ? (
+              <View style={styles.activeScheduleWarning}>
+                <View style={styles.warningHeader}>
+                  <MaterialIcons name="warning" size={20} color="#ef4444" />
+                  <Text style={styles.warningTitle}>
+                    <Text style={styles.warningBold}>Warning:</Text> You are about to delete an active schedule. This action cannot be undone.
+                  </Text>
+                </View>
+                <Text style={styles.warningSubtext}>
+                  Are you sure you want to proceed?
+                </Text>
+              </View>
+            ) : (
+              <Text style={styles.deleteWarningText}>
+                <Text style={styles.deleteWarningBold}>Warning:</Text> This action cannot be undone. Are you sure you want to permanently delete this schedule?
+              </Text>
+            )}
+            
+            <View style={styles.schedulePreview}>
+              <Text style={styles.schedulePreviewTitle}>
+                {getVehicleName(deleteModal.schedule.vehicleId)} - {getDriverName(deleteModal.schedule.driverId)}
+              </Text>
+              <Text style={styles.schedulePreviewDates}>
+                {formatTooltipDate(deleteModal.schedule.startDate)} - {formatTooltipDate(deleteModal.schedule.endDate)}
+              </Text>
+              <View style={styles.schedulePreviewStatus}>
+                <Badge 
+                  type={deleteModal.schedule.status === 'active' ? 'green' : deleteModal.schedule.status === 'scheduled' ? 'blue' : 'gray'} 
+                  label={deleteModal.schedule.status === 'active' ? 'Active' : deleteModal.schedule.status === 'scheduled' ? 'Scheduled' : 'Completed'} 
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
       )}
-    </div>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  header: {
+    backgroundColor: 'white',
+    paddingHorizontal: 24,
+    paddingTop: 60, // Account for status bar
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  headerContent: {
+    marginBottom: 16,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+  },
+  filterButton: {
+    flex: 1,
+  },
+  filterButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterButtonText: {
+    fontSize: 14,
+    color: '#374151',
+    marginLeft: 8,
+  },
+  activeFilterBadge: {
+    backgroundColor: '#dbeafe',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  activeFilterText: {
+    fontSize: 10,
+    color: '#1e40af',
+    fontWeight: '500',
+  },
+  addButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  addButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 8,
+  },
+  modalHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  modalHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+    marginLeft: 8,
+  },
+  modalFooterContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  modalFooterButton: {
+    flex: 1,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clearFiltersText: {
+    color: '#374151',
+    marginLeft: 8,
+  },
+  filterContent: {
+    gap: 24,
+  },
+  filterSection: {
+    gap: 8,
+  },
+  searchInputWrapper: {
+    position: 'relative',
+  },
+  searchIcon: {
+    position: 'absolute',
+    left: 12,
+    top: 12,
+    zIndex: 1,
+  },
+  searchInput: {
+    paddingLeft: 40,
+  },
+  checkboxGroup: {
+    gap: 12,
+  },
+  checkboxItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  checkbox: {
+    width: 16,
+    height: 16,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 3,
+    marginRight: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'white',
+  },
+  checkboxChecked: {
+    backgroundColor: '#2563eb',
+    borderColor: '#2563eb',
+  },
+  checkboxLabel: {
+    fontSize: 14,
+    color: '#374151',
+  },
+  summaryStats: {
+    flexDirection: 'row',
+    gap: 16,
+    paddingHorizontal: 24,
+    marginBottom: 16,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  statContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 20,
+  },
+  statInfo: {
+    flex: 1,
+  },
+  statLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6b7280',
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  resultsHeader: {
+    backgroundColor: 'white',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  resultsInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  resultsTitle: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+    marginRight: 16,
+  },
+  resultsCount: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  schedulesList: {
+    flex: 1,
+    paddingHorizontal: 24,
+  },
+  scheduleCard: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 16,
+    marginVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  scheduleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  scheduleInfo: {
+    flex: 1,
+  },
+  vehicleName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  vehicleDetails: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  scheduleDetails: {
+    gap: 12,
+    marginBottom: 12,
+  },
+  driverInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  driverAvatar: {
+    width: 32,
+    height: 32,
+    backgroundColor: '#f3e8ff',
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  driverName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  scheduleMetrics: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  metricItem: {
+    minWidth: '30%',
+  },
+  metricLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 2,
+  },
+  metricValue: {
+    fontSize: 14,
+    color: '#111827',
+    fontWeight: '500',
+  },
+  scheduleActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+  },
+  actionButton: {
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: '#f9fafb',
+  },
+  emptyState: {
+    alignItems: 'center',
+    padding: 48,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    margin: 24,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginVertical: 16,
+    textAlign: 'center',
+  },
+  pagination: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  paginationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 6,
+    backgroundColor: 'white',
+  },
+  paginationButtonText: {
+    fontSize: 14,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  disabledText: {
+    color: '#9ca3af',
+  },
+  pageInfo: {
+    alignItems: 'center',
+  },
+  pageText: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  notesModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  notesModalHeaderText: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  notesModalTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  notesModalSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  notesModalContent: {
+    gap: 16,
+  },
+  notesContent: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 6,
+    padding: 16,
+  },
+  notesText: {
+    fontSize: 14,
+    color: '#111827',
+    lineHeight: 20,
+  },
+  notesStatusInfo: {
+    backgroundColor: '#eff6ff',
+    borderRadius: 6,
+    padding: 12,
+  },
+  notesStatusItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  notesStatusLabel: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  deleteModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  deleteModalTitle: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+    marginLeft: 12,
+  },
+  deleteModalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  deleteModalContent: {
+    gap: 16,
+  },
+  activeScheduleWarning: {
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    borderRadius: 6,
+    padding: 12,
+  },
+  warningHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  warningTitle: {
+    fontSize: 14,
+    color: '#991b1b',
+    marginLeft: 12,
+    flex: 1,
+  },
+  warningBold: {
+    fontWeight: 'bold',
+  },
+  warningSubtext: {
+    fontSize: 14,
+    color: '#991b1b',
+    marginLeft: 32,
+  },
+  deleteWarningText: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  deleteWarningBold: {
+    fontWeight: 'bold',
+  },
+  schedulePreview: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 6,
+    padding: 12,
+  },
+  schedulePreviewTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  schedulePreviewDates: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginTop: 4,
+  },
+  schedulePreviewStatus: {
+    marginTop: 8,
+  },
+  deletingText: {
+    color: 'white',
+    marginLeft: 8,
+  },
+  deleteButtonText: {
+    color: 'white',
+    marginLeft: 8,
+  },
+  errorContainer: {
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    borderRadius: 8,
+    padding: 16,
+    margin: 24,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  errorContent: {
+    flex: 1,
+  },
+  errorTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#991b1b',
+    marginBottom: 4,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#991b1b',
+  },
+  retryButton: {
+    padding: 8,
+  },
+});
