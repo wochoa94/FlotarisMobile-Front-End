@@ -56,7 +56,7 @@ export function Navigation() {
       {/* Logo Section */}
       <View style={styles.logoSection}>
         {/* Placeholder for Logo component. If Logo.tsx is converted, use <Logo style={styles.logo} /> */}
-        <Image source={require('../../../assets/vite.svg')} style={styles.logo} />
+        <Image source={require('../../assets/vite.svg')} style={styles.logo} />
         <Text style={styles.logoText}>Flotaris</Text>
       </View>
 

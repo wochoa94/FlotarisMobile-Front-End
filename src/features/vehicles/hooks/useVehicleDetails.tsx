@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Vehicle } from '../../../types';
 import { vehicleService } from '../../../services/apiService';
 
@@ -14,7 +14,7 @@ export function useVehicleDetails(vehicleId: string | undefined): UseVehicleDeta
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchVehicle = async () => {
+  const fetchVehicle = useCallback(async () => {
     if (!vehicleId) {
       setVehicle(null);
       setLoading(false);
@@ -34,11 +34,11 @@ export function useVehicleDetails(vehicleId: string | undefined): UseVehicleDeta
     } finally {
       setLoading(false);
     }
-  };
+  }, [vehicleId]);
 
   useEffect(() => {
     fetchVehicle();
-  }, [vehicleId]); // Re-fetch if vehicleId changes
+  }, [fetchVehicle]); // Re-fetch if vehicleId changes
 
   const refreshVehicle = async () => {
     await fetchVehicle();

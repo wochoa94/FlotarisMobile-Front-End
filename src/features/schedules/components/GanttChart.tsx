@@ -269,7 +269,7 @@ export function GanttChart({
               </View>
             )}
           </ScrollView>
-        </div>
+        </View>
       </View>
 
       {/* Tooltip Modal */}
