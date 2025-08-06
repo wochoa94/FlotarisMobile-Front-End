@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Save, X, AlertCircle, CheckCircle } from 'lucide-react';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '../../../hooks/useAuth';
 import { useFleetData } from '../../../hooks/useFleetData';
 import { vehicleService } from '../../../services/apiService';
@@ -17,8 +18,9 @@ interface EditVehicleFormData {
 }
 
 export function EditVehiclePage() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const route = useRoute();
+  const navigation = useNavigation();
+  const { id } = route.params as { id: string };
   const { user } = useAuth();
   const { data, loading, error, refreshData } = useFleetData();
   
@@ -56,8 +58,7 @@ export function EditVehiclePage() {
     }
   }, [successMessage, errorMessage]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+  const handleInputChange = (name: string, value: string) => {
     setFormData(prev => ({
       ...prev,
       [name]: value,
@@ -71,9 +72,7 @@ export function EditVehiclePage() {
     return null;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleSubmit = async () => {
     if (!vehicle) return;
     
     // Clear previous messages
@@ -108,7 +107,7 @@ export function EditVehiclePage() {
       
       // Redirect to vehicle detail page after a short delay
       setTimeout(() => {
-        navigate(`/vehicles/${vehicle.id}`);
+        navigation.navigate('VehicleDetail', { id: vehicle.id });
       }, 1500);
 
     } catch (error) {
@@ -133,209 +132,374 @@ export function EditVehiclePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <View style={styles.centerContainer}>
         <LoadingSpinner size="lg" />
-      </div>
+      </View>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-12">
-        <div className="text-red-600 mb-4">{error}</div>
-        <button 
-          onClick={() => window.location.reload()} 
-          className="text-blue-600 hover:text-blue-700"
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <Button 
+          onPress={() => navigation.goBack()}
+          variant="primary"
         >
           Try again
-        </button>
-      </div>
+        </Button>
+      </View>
     );
   }
 
   if (!vehicle) {
     return (
-      <div className="text-center py-12">
-        <div className="text-gray-500 mb-4">Vehicle not found</div>
-        <button 
-          onClick={() => navigate('/vehicles')} 
-          className="text-blue-600 hover:text-blue-700"
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorText}>Vehicle not found</Text>
+        <Button 
+          onPress={() => navigation.navigate('Vehicles')}
+          variant="primary"
         >
           Back to vehicles
-        </button>
-      </div>
+        </Button>
+      </View>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Link
-            to={`/vehicles/${vehicle.id}`}
-            className="inline-flex items-center text-gray-500 hover:text-gray-700 transition-colors duration-200"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back to Vehicle Details
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Edit Vehicle</h1>
-            <p className="text-sm text-gray-600">
-              Update vehicle information
-            </p>
-          </div>
-        </div>
-      </div>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('VehicleDetail', { id: vehicle.id })}
+              style={styles.backButton}
+              activeOpacity={0.7}
+            >
+              <View style={styles.backButtonContent}>
+                <MaterialIcons name="arrow-back" size={16} color="#6b7280" />
+                <Text style={styles.backButtonText}>Back to Vehicle Details</Text>
+              </View>
+            </TouchableOpacity>
+            <View style={styles.headerInfo}>
+              <Text style={styles.headerTitle}>Edit Vehicle</Text>
+              <Text style={styles.headerSubtitle}>
+                Update vehicle information
+              </Text>
+            </View>
+          </View>
+        </View>
 
-      {/* Success Message */}
-      {successMessage && (
-        <Alert
-          type="success"
-          message={successMessage}
-          onDismiss={() => dismissMessage('success')}
-        />
-      )}
+        {/* Success Message */}
+        {successMessage && (
+          <Alert
+            type="success"
+            message={successMessage}
+            onDismiss={() => dismissMessage('success')}
+          />
+        )}
 
-      {/* Error Message */}
-      {errorMessage && (
-        <Alert
-          type="error"
-          message={errorMessage}
-          onDismiss={() => dismissMessage('error')}
-        />
-      )}
+        {/* Error Message */}
+        {errorMessage && (
+          <Alert
+            type="error"
+            message={errorMessage}
+            onDismiss={() => dismissMessage('error')}
+          />
+        )}
 
-      {/* Current Vehicle Info */}
-      <div className="bg-gray-50 rounded-lg p-4">
-        <h3 className="text-sm font-medium text-gray-700 mb-2">Current Vehicle Information</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-          <div>
-            <span className="text-gray-500">Make/Model:</span>
-            <span className="ml-2 font-medium">{vehicle.make} {vehicle.model} {vehicle.year}</span>
-          </div>
-          <div>
-            <span className="text-gray-500">VIN:</span>
-            <span className="ml-2 font-mono">{vehicle.vin || 'N/A'}</span>
-          </div>
-          <div>
-            <span className="text-gray-500">Status:</span>
-            <span className="ml-2 font-medium capitalize">{vehicle.status}</span>
-          </div>
-        </div>
-      </div>
+        {/* Current Vehicle Info */}
+        <View style={styles.currentVehicleInfo}>
+          <Text style={styles.currentVehicleTitle}>Current Vehicle Information</Text>
+          <View style={styles.currentVehicleGrid}>
+            <View style={styles.currentVehicleItem}>
+              <Text style={styles.currentVehicleLabel}>Make/Model:</Text>
+              <Text style={styles.currentVehicleValue}>{vehicle.make} {vehicle.model} {vehicle.year}</Text>
+            </View>
+            <View style={styles.currentVehicleItem}>
+              <Text style={styles.currentVehicleLabel}>VIN:</Text>
+              <Text style={[styles.currentVehicleValue, styles.monoText]}>{vehicle.vin || 'N/A'}</Text>
+            </View>
+            <View style={styles.currentVehicleItem}>
+              <Text style={styles.currentVehicleLabel}>Status:</Text>
+              <Text style={[styles.currentVehicleValue, styles.capitalizeText]}>{vehicle.status}</Text>
+            </View>
+          </View>
+        </View>
 
-      {/* Edit Form */}
-      <div className="bg-white shadow rounded-lg">
-        <form onSubmit={handleSubmit} className="px-4 py-5 sm:p-6">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        {/* Edit Form */}
+        <View style={styles.formContainer}>
+          <View style={styles.formContent}>
             {/* Vehicle Name */}
-            <div className="sm:col-span-2">
-              <Label htmlFor="name">
-                Vehicle Name *
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>Vehicle Name *</Label>
               <Input
-                type="text"
-                id="name"
-                name="name"
                 value={formData.name}
-                onChange={handleInputChange}
-                required
+                onChangeText={(value) => handleInputChange('name', value)}
                 placeholder="Enter vehicle name"
               />
-            </div>
+            </View>
 
             {/* License Plate */}
-            <div>
-              <Label htmlFor="licensePlate">
-                License Plate *
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>License Plate *</Label>
               <Input
-                type="text"
-                id="licensePlate"
-                name="licensePlate"
                 value={formData.licensePlate}
-                onChange={handleInputChange}
-                required
+                onChangeText={(value) => handleInputChange('licensePlate', value)}
                 placeholder="Enter license plate"
               />
-            </div>
+            </View>
 
             {/* Last Maintenance */}
-            <div>
-              <Label htmlFor="lastMaintenance">
-                Last Maintenance Date *
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>Last Maintenance Date *</Label>
               <Input
-                type="date"
-                id="lastMaintenance"
-                name="lastMaintenance"
                 value={formData.lastMaintenance}
-                onChange={handleInputChange}
-                required
+                onChangeText={(value) => handleInputChange('lastMaintenance', value)}
+                placeholder="YYYY-MM-DD"
               />
-            </div>
-          </div>
+              <Text style={styles.inputHint}>
+                Format: YYYY-MM-DD (e.g., 2024-01-15)
+              </Text>
+            </View>
+          </View>
 
           {/* Read-only Information */}
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <h4 className="text-sm font-medium text-gray-700 mb-4">Read-only Information</h4>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Make</dt>
-                <dd className="mt-1 text-sm text-gray-900">{vehicle.make || 'N/A'}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Model</dt>
-                <dd className="mt-1 text-sm text-gray-900">{vehicle.model || 'N/A'}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Year</dt>
-                <dd className="mt-1 text-sm text-gray-900">{vehicle.year || 'N/A'}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">VIN</dt>
-                <dd className="mt-1 text-sm text-gray-900 font-mono">{vehicle.vin || 'N/A'}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Status</dt>
-                <dd className="mt-1 text-sm text-gray-900 capitalize">{vehicle.status}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Mileage</dt>
-                <dd className="mt-1 text-sm text-gray-900">{vehicle.mileage?.toLocaleString() || 'N/A'} miles</dd>
-              </div>
-            </div>
-          </div>
+          <View style={styles.readOnlySection}>
+            <Text style={styles.readOnlyTitle}>Read-only Information</Text>
+            <View style={styles.readOnlyGrid}>
+              <View style={styles.readOnlyItem}>
+                <Text style={styles.readOnlyLabel}>Make</Text>
+                <Text style={styles.readOnlyValue}>{vehicle.make || 'N/A'}</Text>
+              </View>
+              <View style={styles.readOnlyItem}>
+                <Text style={styles.readOnlyLabel}>Model</Text>
+                <Text style={styles.readOnlyValue}>{vehicle.model || 'N/A'}</Text>
+              </View>
+              <View style={styles.readOnlyItem}>
+                <Text style={styles.readOnlyLabel}>Year</Text>
+                <Text style={styles.readOnlyValue}>{vehicle.year || 'N/A'}</Text>
+              </View>
+              <View style={styles.readOnlyItem}>
+                <Text style={styles.readOnlyLabel}>VIN</Text>
+                <Text style={[styles.readOnlyValue, styles.monoText]}>{vehicle.vin || 'N/A'}</Text>
+              </View>
+              <View style={styles.readOnlyItem}>
+                <Text style={styles.readOnlyLabel}>Status</Text>
+                <Text style={[styles.readOnlyValue, styles.capitalizeText]}>{vehicle.status}</Text>
+              </View>
+              <View style={styles.readOnlyItem}>
+                <Text style={styles.readOnlyLabel}>Mileage</Text>
+                <Text style={styles.readOnlyValue}>{vehicle.mileage?.toLocaleString() || 'N/A'} miles</Text>
+              </View>
+            </View>
+          </View>
 
           {/* Form Actions */}
-          <div className="mt-6 flex items-center justify-end space-x-3">
-            <Link
-              to={`/vehicles/${vehicle.id}`}
-              className="btn-secondary"
+          <View style={styles.formActions}>
+            <Button
+              onPress={() => navigation.navigate('VehicleDetail', { id: vehicle.id })}
+              variant="secondary"
+              style={styles.actionButton}
             >
               Cancel
-            </Link>
+            </Button>
             <Button
-              type="submit"
+              onPress={handleSubmit}
               disabled={isLoading}
               variant="primary"
+              style={styles.actionButton}
             >
               {isLoading ? (
-                <>
-                  <LoadingSpinner size="sm" className="text-white mr-2" />
-                  Updating Vehicle...
-                </>
+                <View style={styles.loadingContent}>
+                  <LoadingSpinner size="sm" color="white" />
+                  <Text style={styles.loadingText}>Updating Vehicle...</Text>
+                </View>
               ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Update Vehicle
-                </>
+                <View style={styles.buttonContent}>
+                  <MaterialIcons name="save" size={16} color="white" />
+                  <Text style={styles.buttonText}>Update Vehicle</Text>
+                </View>
               )}
             </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+          </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 24,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#ef4444',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  header: {
+    marginBottom: 24,
+  },
+  headerContent: {
+    gap: 16,
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+  },
+  backButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButtonText: {
+    color: '#6b7280',
+    marginLeft: 4,
+    fontSize: 14,
+  },
+  headerInfo: {
+    gap: 4,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  currentVehicleInfo: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 24,
+  },
+  currentVehicleTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  currentVehicleGrid: {
+    gap: 16,
+  },
+  currentVehicleItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  currentVehicleLabel: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  currentVehicleValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  monoText: {
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  capitalizeText: {
+    textTransform: 'capitalize',
+  },
+  formContainer: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  formContent: {
+    gap: 24,
+  },
+  inputGroup: {
+    gap: 8,
+  },
+  inputHint: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  readOnlySection: {
+    marginTop: 24,
+    paddingTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  readOnlyTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 16,
+  },
+  readOnlyGrid: {
+    gap: 16,
+  },
+  readOnlyItem: {
+    gap: 4,
+  },
+  readOnlyLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  readOnlyValue: {
+    fontSize: 14,
+    color: '#111827',
+  },
+  formActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 24,
+    gap: 12,
+  },
+  actionButton: {
+    flex: 1,
+  },
+  loadingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    color: 'white',
+    marginLeft: 8,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    marginLeft: 8,
+  },
+});

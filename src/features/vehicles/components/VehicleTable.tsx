@@ -1,10 +1,13 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { Eye, Edit, Plus, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Vehicle, User } from '../../../types';
 import { Badge } from '../../../components/ui/Badge';
 import { LoadingSpinner } from '../../../components/ui/LoadingSpinner';
 import { Button } from '../../../components/ui/Button';
+import { Input } from '../../../components/ui/Input';
+import { Card } from '../../../components/ui/Card';
 
 interface VehicleTableProps {
   vehicles: Vehicle[];
@@ -47,14 +50,16 @@ export function VehicleTable({
   onItemsPerPageChange,
   onClearAllFilters,
 }: VehicleTableProps) {
+  const navigation = useNavigation();
+
   // Render sort icon
   const renderSortIcon = (column: string) => {
     if (sortBy !== column) {
-      return <ChevronUp className="h-4 w-4 text-gray-300" />;
+      return <MaterialIcons name="keyboard-arrow-up" size={16} color="#d1d5db" />;
     }
     return sortOrder === 'asc' 
-      ? <ChevronUp className="h-4 w-4 text-blue-600" />
-      : <ChevronDown className="h-4 w-4 text-blue-600" />;
+      ? <MaterialIcons name="keyboard-arrow-up" size={16} color="#2563eb" />
+      : <MaterialIcons name="keyboard-arrow-down" size={16} color="#2563eb" />;
   };
 
   // Handle page change
@@ -86,254 +91,312 @@ export function VehicleTable({
   };
 
   return (
-    <div className="bg-white shadow rounded-lg">
-      <div className="px-4 py-3 sm:px-6 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <h3 className="text-lg font-medium text-gray-900">
-              Fleet Vehicles ({totalCount})
-            </h3>
-            {loading && <LoadingSpinner size="sm" />}
-          </div>
+    <Card style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <Text style={styles.headerTitle}>Fleet Vehicles ({totalCount})</Text>
+          {loading && <LoadingSpinner size="sm" />}
+        </View>
+        
+        <View style={styles.headerRight}>
+          {/* Items per page */}
+          <View style={styles.itemsPerPageContainer}>
+            <Text style={styles.itemsPerPageLabel}>Show:</Text>
+            <Input
+              as="select"
+              selectedValue={itemsPerPage.toString()}
+              onValueChange={(value) => onItemsPerPageChange(Number(value))}
+              style={styles.itemsPerPageSelect}
+            >
+              <Input.Item label="5" value="5" />
+              <Input.Item label="10" value="10" />
+              <Input.Item label="25" value="25" />
+              <Input.Item label="50" value="50" />
+            </Input>
+          </View>
           
-          <div className="flex items-center space-x-4">
-            {/* Items per page */}
-            <div className="flex items-center space-x-2">
-              <label htmlFor="itemsPerPage" className="text-sm text-gray-700">
-                Show:
-              </label>
-              <select
-                id="itemsPerPage"
-                value={itemsPerPage}
-                onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-                className="border border-gray-300 rounded-md text-sm py-1 px-2 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-              </select>
-            </div>
-            
-            {totalCount > 0 && (
-              <div className="text-sm text-gray-500">
-                Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+          {totalCount > 0 && (
+            <Text style={styles.resultsCount}>
+              Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount}
+            </Text>
+          )}
+        </View>
+      </View>
 
-      {/* Vehicles Table */}
-      <div className="overflow-x-auto">
+      {/* Vehicles List */}
+      <ScrollView style={styles.vehiclesList}>
         {vehicles.length > 0 ? (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-200"
-                  onClick={() => onSorting('name')}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Vehicle Name</span>
-                    {renderSortIcon('name')}
-                  </div>
-                </th>
-                <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-200"
-                  onClick={() => onSorting('status')}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Status</span>
-                    {renderSortIcon('status')}
-                  </div>
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  VIN
-                </th>
-                <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-200"
-                  onClick={() => onSorting('mileage')}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Mileage</span>
-                    {renderSortIcon('mileage')}
-                  </div>
-                </th>
-                <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-200"
-                  onClick={() => onSorting('maintenanceCost')}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Maintenance Cost</span>
-                    {renderSortIcon('maintenanceCost')}
-                  </div>
-                </th>
-                <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-200"
-                  onClick={() => onSorting('assignedDriver')}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Assigned Driver</span>
-                    {renderSortIcon('assignedDriver')}
-                  </div>
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {vehicles.map((vehicle) => (
-                <tr key={vehicle.id} className="hover:bg-gray-50 transition-colors duration-150">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {vehicle.name}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {vehicle.make} {vehicle.model} {vehicle.year}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <Badge 
-                      type={vehicle.status === 'active' ? 'green' : vehicle.status === 'maintenance' ? 'orange' : 'red'} 
-                      label={vehicle.status === 'active' ? 'Active' : vehicle.status === 'maintenance' ? 'Maintenance' : 'Idle'} 
-                    />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">
-                    {vehicle.vin || 'N/A'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {vehicle.mileage?.toLocaleString() || 'N/A'} miles
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${vehicle.maintenanceCost?.toLocaleString() || '0'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {vehicle.assignedDriverName ? (
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {vehicle.assignedDriverName}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {vehicle.assignedDriverEmail || 'No email'}
-                        </div>
-                      </div>
-                    ) : (
-                      <Badge type="gray" label="Unassigned" />
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex justify-end space-x-2">
-                      <Link
-                        to={`/vehicles/${vehicle.id}`}
-                        className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded transition-colors duration-200 focus-ring"
-                        title="View Details"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Link>
-                      {user?.isAdmin && (
-                        <Link
-                          to={`/vehicles/${vehicle.id}/edit`}
-                          className="text-gray-600 hover:text-gray-900 p-1 hover:bg-gray-50 rounded transition-colors duration-200 focus-ring"
-                          title="Edit Vehicle"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Link>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          vehicles.map((vehicle) => (
+            <TouchableOpacity
+              key={vehicle.id}
+              style={styles.vehicleCard}
+              onPress={() => navigation.navigate('VehicleDetail', { id: vehicle.id })}
+              activeOpacity={0.7}
+            >
+              <View style={styles.vehicleHeader}>
+                <View style={styles.vehicleInfo}>
+                  <Text style={styles.vehicleName}>{vehicle.name}</Text>
+                  <Text style={styles.vehicleDetails}>
+                    {vehicle.make} {vehicle.model} {vehicle.year}
+                  </Text>
+                </View>
+                <Badge 
+                  type={vehicle.status === 'active' ? 'green' : vehicle.status === 'maintenance' ? 'orange' : 'red'} 
+                  label={vehicle.status === 'active' ? 'Active' : vehicle.status === 'maintenance' ? 'Maintenance' : 'Idle'} 
+                />
+              </View>
+              
+              <View style={styles.vehicleMetrics}>
+                <View style={styles.metricItem}>
+                  <Text style={styles.metricLabel}>VIN</Text>
+                  <Text style={styles.metricValue}>{vehicle.vin || 'N/A'}</Text>
+                </View>
+                <View style={styles.metricItem}>
+                  <Text style={styles.metricLabel}>Mileage</Text>
+                  <Text style={styles.metricValue}>{vehicle.mileage?.toLocaleString() || 'N/A'} miles</Text>
+                </View>
+                <View style={styles.metricItem}>
+                  <Text style={styles.metricLabel}>Maintenance Cost</Text>
+                  <Text style={styles.metricValue}>${vehicle.maintenanceCost?.toLocaleString() || '0'}</Text>
+                </View>
+                <View style={styles.metricItem}>
+                  <Text style={styles.metricLabel}>Assigned Driver</Text>
+                  <Text style={styles.metricValue}>
+                    {vehicle.assignedDriverName || 'Unassigned'}
+                  </Text>
+                </View>
+              </View>
+
+              {user?.isAdmin && (
+                <View style={styles.vehicleActions}>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => navigation.navigate('VehicleDetail', { id: vehicle.id })}
+                  >
+                    <MaterialIcons name="visibility" size={16} color="#2563eb" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => navigation.navigate('EditVehicle', { id: vehicle.id })}
+                  >
+                    <MaterialIcons name="edit" size={16} color="#6b7280" />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </TouchableOpacity>
+          ))
         ) : (
-          <div className="text-center py-12">
-            <div className="text-gray-500 mb-4">
+          <View style={styles.emptyState}>
+            <MaterialCommunityIcons name="truck" size={48} color="#9ca3af" />
+            <Text style={styles.emptyStateText}>
               {loading ? 'Loading vehicles...' : 
                (searchTerm || statusFilters.length > 0 || unassignedFilter) ? 
                'No vehicles match your filters' : 'No vehicles found'}
-            </div>
+            </Text>
             {!loading && (searchTerm || statusFilters.length > 0 || unassignedFilter) && (
               <Button
-                onClick={onClearAllFilters}
+                onPress={onClearAllFilters}
                 variant="secondary"
               >
                 Clear all filters
               </Button>
             )}
-          </div>
+          </View>
         )}
-      </div>
+      </ScrollView>
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-          <div className="flex-1 flex justify-between sm:hidden">
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={!hasPreviousPage || loading}
-              className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+        <View style={styles.pagination}>
+          <TouchableOpacity
+            style={[styles.paginationButton, (!hasPreviousPage || loading) && styles.disabledButton]}
+            onPress={() => handlePageChange(currentPage - 1)}
+            disabled={!hasPreviousPage || loading}
+          >
+            <MaterialIcons name="chevron-left" size={20} color={(!hasPreviousPage || loading) ? "#9ca3af" : "#374151"} />
+            <Text style={[styles.paginationButtonText, (!hasPreviousPage || loading) && styles.disabledText]}>
               Previous
-            </button>
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={!hasNextPage || loading}
-              className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            </Text>
+          </TouchableOpacity>
+          
+          <View style={styles.pageInfo}>
+            <Text style={styles.pageText}>
+              Page {currentPage} of {totalPages}
+            </Text>
+          </View>
+          
+          <TouchableOpacity
+            style={[styles.paginationButton, (!hasNextPage || loading) && styles.disabledButton]}
+            onPress={() => handlePageChange(currentPage + 1)}
+            disabled={!hasNextPage || loading}
+          >
+            <Text style={[styles.paginationButtonText, (!hasNextPage || loading) && styles.disabledText]}>
               Next
-            </button>
-          </div>
-          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm text-gray-700">
-                Showing <span className="font-medium">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
-                <span className="font-medium">{Math.min(currentPage * itemsPerPage, totalCount)}</span> of{' '}
-                <span className="font-medium">{totalCount}</span> results
-              </p>
-            </div>
-            <div>
-              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={!hasPreviousPage || loading}
-                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span className="sr-only">Previous</span>
-                  <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-                </button>
-                
-                {getPageNumbers().map((pageNumber) => (
-                  <button
-                    key={pageNumber}
-                    onClick={() => handlePageChange(pageNumber)}
-                    disabled={loading}
-                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                      currentPage === pageNumber
-                        ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
-                  >
-                    {pageNumber}
-                  </button>
-                ))}
-                
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={!hasNextPage || loading}
-                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span className="sr-only">Next</span>
-                  <ChevronRight className="h-5 w-5" aria-hidden="true" />
-                </button>
-              </nav>
-            </div>
-          </div>
-        </div>
+            </Text>
+            <MaterialIcons name="chevron-right" size={20} color={(!hasNextPage || loading) ? "#9ca3af" : "#374151"} />
+          </TouchableOpacity>
+        </View>
       )}
-    </div>
+    </Card>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  itemsPerPageContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  itemsPerPageLabel: {
+    fontSize: 14,
+    color: '#374151',
+  },
+  itemsPerPageSelect: {
+    minWidth: 60,
+  },
+  resultsCount: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  vehiclesList: {
+    flex: 1,
+    padding: 16,
+  },
+  vehicleCard: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  vehicleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  vehicleInfo: {
+    flex: 1,
+  },
+  vehicleName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  vehicleDetails: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  vehicleMetrics: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    marginBottom: 12,
+  },
+  metricItem: {
+    minWidth: '45%',
+  },
+  metricLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 2,
+  },
+  metricValue: {
+    fontSize: 14,
+    color: '#111827',
+    fontWeight: '500',
+  },
+  vehicleActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+  },
+  actionButton: {
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: '#f9fafb',
+  },
+  emptyState: {
+    alignItems: 'center',
+    padding: 48,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    margin: 24,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginVertical: 16,
+    textAlign: 'center',
+  },
+  pagination: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  paginationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 6,
+    backgroundColor: 'white',
+  },
+  paginationButtonText: {
+    fontSize: 14,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  disabledText: {
+    color: '#9ca3af',
+  },
+  pageInfo: {
+    alignItems: 'center',
+  },
+  pageText: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+});

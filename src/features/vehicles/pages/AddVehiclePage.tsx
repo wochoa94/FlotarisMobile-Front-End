@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Plus, X, AlertCircle, CheckCircle } from 'lucide-react';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../../../hooks/useAuth';
 import { useFleetData } from '../../../hooks/useFleetData';
 import { vehicleService } from '../../../services/apiService';
@@ -24,7 +25,7 @@ interface VehicleFormData {
 }
 
 export function AddVehiclePage() {
-  const navigate = useNavigate();
+  const navigation = useNavigation();
   const { user } = useAuth();
   const { refreshData } = useFleetData();
   
@@ -56,8 +57,7 @@ export function AddVehiclePage() {
     }
   }, [successMessage, errorMessage]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
+  const handleInputChange = (name: string, value: string) => {
     setFormData(prev => ({
       ...prev,
       [name]: value,
@@ -91,9 +91,7 @@ export function AddVehiclePage() {
     return null;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleSubmit = async () => {
     // Clear previous messages
     setSuccessMessage('');
     setErrorMessage('');
@@ -137,7 +135,7 @@ export function AddVehiclePage() {
       
       // Redirect to vehicles page after a short delay
       setTimeout(() => {
-        navigate('/vehicles');
+        navigation.navigate('Vehicles');
       }, 1500);
 
     } catch (error) {
@@ -161,237 +159,291 @@ export function AddVehiclePage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Link
-            to="/vehicles"
-            className="inline-flex items-center text-gray-500 hover:text-gray-700 transition-colors duration-200"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back to Vehicles
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Add New Vehicle</h1>
-            <p className="text-sm text-gray-600">
-              Add a new vehicle to your fleet
-            </p>
-          </div>
-        </div>
-      </div>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Vehicles')}
+              style={styles.backButton}
+              activeOpacity={0.7}
+            >
+              <View style={styles.backButtonContent}>
+                <MaterialIcons name="arrow-back" size={16} color="#6b7280" />
+                <Text style={styles.backButtonText}>Back to Vehicles</Text>
+              </View>
+            </TouchableOpacity>
+            <View style={styles.headerInfo}>
+              <Text style={styles.headerTitle}>Add New Vehicle</Text>
+              <Text style={styles.headerSubtitle}>
+                Add a new vehicle to your fleet
+              </Text>
+            </View>
+          </View>
+        </View>
 
-      {/* Success Message */}
-      {successMessage && (
-        <Alert
-          type="success"
-          message={successMessage}
-          onDismiss={() => dismissMessage('success')}
-        />
-      )}
+        {/* Success Message */}
+        {successMessage && (
+          <Alert
+            type="success"
+            message={successMessage}
+            onDismiss={() => dismissMessage('success')}
+          />
+        )}
 
-      {/* Error Message */}
-      {errorMessage && (
-        <Alert
-          type="error"
-          message={errorMessage}
-          onDismiss={() => dismissMessage('error')}
-        />
-      )}
+        {/* Error Message */}
+        {errorMessage && (
+          <Alert
+            type="error"
+            message={errorMessage}
+            onDismiss={() => dismissMessage('error')}
+          />
+        )}
 
-      {/* Form */}
-      <div className="bg-white shadow rounded-lg">
-        <form onSubmit={handleSubmit} className="px-4 py-5 sm:p-6">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        {/* Form */}
+        <View style={styles.formContainer}>
+          <View style={styles.formContent}>
             {/* Vehicle Name */}
-            <div className="sm:col-span-2">
-              <Label htmlFor="name">
-                Vehicle Name *
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>Vehicle Name *</Label>
               <Input
-                type="text"
-                id="name"
-                name="name"
                 value={formData.name}
-                onChange={handleInputChange}
-                required
+                onChangeText={(value) => handleInputChange('name', value)}
                 placeholder="Enter vehicle name"
               />
-            </div>
+            </View>
 
             {/* License Plate */}
-            <div>
-              <Label htmlFor="licensePlate">
-                License Plate *
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>License Plate *</Label>
               <Input
-                type="text"
-                id="licensePlate"
-                name="licensePlate"
                 value={formData.licensePlate}
-                onChange={handleInputChange}
-                required
+                onChangeText={(value) => handleInputChange('licensePlate', value)}
                 placeholder="Enter license plate"
               />
-            </div>
+            </View>
 
             {/* VIN */}
-            <div>
-              <Label htmlFor="vin">
-                VIN (Vehicle Identification Number)
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>VIN (Vehicle Identification Number)</Label>
               <Input
-                type="text"
-                id="vin"
-                name="vin"
                 value={formData.vin}
-                onChange={handleInputChange}
-                maxLength={17}
-                className="font-mono"
+                onChangeText={(value) => handleInputChange('vin', value)}
                 placeholder="17-character VIN (optional)"
+                maxLength={17}
+                autoCapitalize="characters"
               />
-            </div>
+            </View>
 
             {/* Make */}
-            <div>
-              <Label htmlFor="make">
-                Make
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>Make</Label>
               <Input
-                type="text"
-                id="make"
-                name="make"
                 value={formData.make}
-                onChange={handleInputChange}
+                onChangeText={(value) => handleInputChange('make', value)}
                 placeholder="e.g., Toyota, Ford, Honda"
               />
-            </div>
+            </View>
 
             {/* Model */}
-            <div>
-              <Label htmlFor="model">
-                Model
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>Model</Label>
               <Input
-                type="text"
-                id="model"
-                name="model"
                 value={formData.model}
-                onChange={handleInputChange}
+                onChangeText={(value) => handleInputChange('model', value)}
                 placeholder="e.g., Camry, F-150, Civic"
               />
-            </div>
+            </View>
 
             {/* Year */}
-            <div>
-              <Label htmlFor="year">
-                Year
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>Year</Label>
               <Input
-                type="number"
-                id="year"
-                name="year"
                 value={formData.year}
-                onChange={handleInputChange}
-                min="1900"
-                max={new Date().getFullYear() + 1}
+                onChangeText={(value) => handleInputChange('year', value)}
                 placeholder="e.g., 2023"
+                keyboardType="numeric"
               />
-            </div>
+            </View>
 
             {/* Fuel Type */}
-            <div>
-              <Label htmlFor="fuelType">
-                Fuel Type
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>Fuel Type</Label>
               <Input
-                type="text"
-                id="fuelType"
-                name="fuelType"
                 value={formData.fuelType}
-                onChange={handleInputChange}
+                onChangeText={(value) => handleInputChange('fuelType', value)}
                 placeholder="e.g., Gasoline, Diesel, Electric, Hybrid"
               />
-            </div>
+            </View>
 
             {/* Mileage */}
-            <div>
-              <Label htmlFor="mileage">
-                Current Mileage
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>Current Mileage</Label>
               <Input
-                type="number"
-                id="mileage"
-                name="mileage"
                 value={formData.mileage}
-                onChange={handleInputChange}
-                min="0"
+                onChangeText={(value) => handleInputChange('mileage', value)}
                 placeholder="Enter current mileage"
+                keyboardType="numeric"
               />
-            </div>
+            </View>
 
             {/* Last Maintenance */}
-            <div>
-              <Label htmlFor="lastMaintenance">
-                Last Maintenance Date *
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>Last Maintenance Date *</Label>
               <Input
-                type="date"
-                id="lastMaintenance"
-                name="lastMaintenance"
                 value={formData.lastMaintenance}
-                onChange={handleInputChange}
-                required
+                onChangeText={(value) => handleInputChange('lastMaintenance', value)}
+                placeholder="YYYY-MM-DD"
               />
-            </div>
+              <Text style={styles.inputHint}>
+                Format: YYYY-MM-DD (e.g., 2024-01-15)
+              </Text>
+            </View>
 
             {/* Initial Maintenance Cost */}
-            <div>
-              <Label htmlFor="maintenanceCost">
-                Initial Maintenance Cost *
-              </Label>
+            <View style={styles.inputGroup}>
+              <Label>Initial Maintenance Cost *</Label>
               <Input
-                type="number"
-                id="maintenanceCost"
-                name="maintenanceCost"
                 value={formData.maintenanceCost}
-                onChange={handleInputChange}
-                required
-                min="0"
-                step="0.01"
+                onChangeText={(value) => handleInputChange('maintenanceCost', value)}
                 placeholder="0.00"
+                keyboardType="numeric"
               />
-            </div>
-          </div>
+            </View>
+          </View>
 
           {/* Form Actions */}
-          <div className="mt-6 flex items-center justify-end space-x-3">
-            <Link
-              to="/vehicles"
-              className="btn-secondary"
+          <View style={styles.formActions}>
+            <Button
+              onPress={() => navigation.navigate('Vehicles')}
+              variant="secondary"
+              style={styles.actionButton}
             >
               Cancel
-            </Link>
+            </Button>
             <Button
-              type="submit"
+              onPress={handleSubmit}
               disabled={isLoading}
               variant="primary"
+              style={styles.actionButton}
             >
               {isLoading ? (
-                <>
-                  <LoadingSpinner size="sm" className="text-white mr-2" />
-                  Adding Vehicle...
-                </>
+                <View style={styles.loadingContent}>
+                  <LoadingSpinner size="sm" color="white" />
+                  <Text style={styles.loadingText}>Adding Vehicle...</Text>
+                </View>
               ) : (
-                <>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Vehicle
-                </>
+                <View style={styles.buttonContent}>
+                  <MaterialIcons name="add" size={16} color="white" />
+                  <Text style={styles.buttonText}>Add Vehicle</Text>
+                </View>
               )}
             </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+          </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 24,
+  },
+  header: {
+    marginBottom: 24,
+  },
+  headerContent: {
+    gap: 16,
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+  },
+  backButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButtonText: {
+    color: '#6b7280',
+    marginLeft: 4,
+    fontSize: 14,
+  },
+  headerInfo: {
+    gap: 4,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  formContainer: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  formContent: {
+    gap: 24,
+  },
+  inputGroup: {
+    gap: 8,
+  },
+  inputHint: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  formActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 24,
+    gap: 12,
+  },
+  actionButton: {
+    flex: 1,
+  },
+  loadingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    color: 'white',
+    marginLeft: 8,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    marginLeft: 8,
+  },
+});

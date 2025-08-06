@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { Vehicle, VehicleQueryParams, PaginatedVehiclesResponse } from '../../../types';
 import { vehicleService } from '../../../services/apiService';
 
@@ -38,26 +37,16 @@ interface UseVehiclesDataReturn {
 }
 
 export function useVehiclesData(): UseVehiclesDataReturn {
-  const [searchParams, setSearchParams] = useSearchParams();
-  
-  // Initialize state from URL parameters
+  // Initialize state with default values (no URL parameters in mobile)
   const getInitialState = () => {
-    const search = searchParams.get('search') || '';
-    const status = searchParams.getAll('status');
-    const unassigned = searchParams.get('unassigned') === 'true';
-    const sortBy = (searchParams.get('sortBy') as SortColumn) || 'status'; // Default to status sort
-    const sortOrder = (searchParams.get('sortOrder') as SortDirection) || 'asc';
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const limit = parseInt(searchParams.get('limit') || '10', 10);
-    
     return {
-      search,
-      status,
-      unassigned,
-      sortBy,
-      sortOrder,
-      page,
-      limit,
+      search: '',
+      status: [] as string[],
+      unassigned: false,
+      sortBy: 'status' as SortColumn, // Default to status sort
+      sortOrder: 'asc' as SortDirection,
+      page: 1,
+      limit: 10,
     };
   };
 
@@ -102,21 +91,6 @@ export function useVehiclesData(): UseVehiclesDataReturn {
     };
   }, [searchTerm]);
 
-  // Update URL parameters when state changes
-  const updateUrlParams = useCallback(() => {
-    const params = new URLSearchParams();
-    
-    if (debouncedSearchTerm) params.set('search', debouncedSearchTerm);
-    statusFilters.forEach(status => params.append('status', status));
-    if (unassignedFilter) params.set('unassigned', 'true');
-    if (sortBy !== 'status') params.set('sortBy', sortBy); // Only add to URL if not default
-    if (sortOrder !== 'asc') params.set('sortOrder', sortOrder);
-    if (currentPage !== 1) params.set('page', currentPage.toString());
-    if (itemsPerPage !== 10) params.set('limit', itemsPerPage.toString());
-    
-    setSearchParams(params, { replace: true });
-  }, [debouncedSearchTerm, statusFilters, unassignedFilter, sortBy, sortOrder, currentPage, itemsPerPage, setSearchParams]);
-
   // Fetch data function
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -157,11 +131,6 @@ export function useVehiclesData(): UseVehiclesDataReturn {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-  // Effect to update URL when state changes
-  useEffect(() => {
-    updateUrlParams();
-  }, [updateUrlParams]);
 
   // Action functions
   const setSearchTerm = useCallback((term: string) => {

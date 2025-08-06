@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit, Calendar, Gauge, DollarSign, User, Settings, Trash2, X, AlertTriangle, CheckCircle } from 'lucide-react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useVehicleDetails } from '../hooks/useVehicleDetails';
 import { useAuth } from '../../../hooks/useAuth';
 import { vehicleService } from '../../../services/apiService';
@@ -9,10 +10,13 @@ import { formatDate } from '../../../utils/dateUtils';
 import { Button } from '../../../components/ui/Button';
 import { Badge } from '../../../components/ui/Badge';
 import { Alert } from '../../../components/ui/Alert';
+import { Modal } from '../../../components/ui/Modal';
+import { Card, CardBody } from '../../../components/ui/Card';
 
 export function VehicleDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const route = useRoute();
+  const navigation = useNavigation();
+  const { id } = route.params as { id: string };
   const { vehicle, loading, error, refreshVehicle } = useVehicleDetails(id);
   const { user } = useAuth();
 
@@ -48,7 +52,7 @@ export function VehicleDetailPage() {
       // Close modal and redirect after a short delay
       setShowDeleteModal(false);
       setTimeout(() => {
-        navigate('/vehicles');
+        navigation.navigate('Vehicles');
       }, 1500);
 
     } catch (error) {
@@ -73,42 +77,42 @@ export function VehicleDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <View style={styles.centerContainer}>
         <LoadingSpinner size="lg" />
-      </div>
+      </View>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-12">
-        <div className="text-red-600 mb-4">{error}</div>
-        <button 
-          onClick={() => window.location.reload()} 
-          className="text-blue-600 hover:text-blue-700"
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <Button 
+          onPress={() => navigation.goBack()}
+          variant="primary"
         >
           Try again
-        </button>
-      </div>
+        </Button>
+      </View>
     );
   }
 
   if (!vehicle) {
     return (
-      <div className="text-center py-12">
-        <div className="text-gray-500 mb-4">Vehicle not found</div>
-        <button 
-          onClick={() => navigate('/vehicles')} 
-          className="text-blue-600 hover:text-blue-700"
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorText}>Vehicle not found</Text>
+        <Button 
+          onPress={() => navigation.navigate('Vehicles')}
+          variant="primary"
         >
           Back to vehicles
-        </button>
-      </div>
+        </Button>
+      </View>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       {/* Success Message */}
       {successMessage && (
         <Alert
@@ -128,211 +132,201 @@ export function VehicleDetailPage() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={() => navigate('/vehicles')}
-            className="inline-flex items-center text-gray-500 hover:text-gray-700"
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Vehicles')}
+            style={styles.backButton}
+            activeOpacity={0.7}
           >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back to Vehicles
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{vehicle.name}</h1>
-            <p className="text-sm text-gray-600">
+            <View style={styles.backButtonContent}>
+              <MaterialIcons name="arrow-back" size={16} color="#6b7280" />
+              <Text style={styles.backButtonText}>Back to Vehicles</Text>
+            </View>
+          </TouchableOpacity>
+          <View style={styles.headerInfo}>
+            <Text style={styles.headerTitle}>{vehicle.name}</Text>
+            <Text style={styles.headerSubtitle}>
               {vehicle.make} {vehicle.model} {vehicle.year}
-            </p>
-          </div>
-        </div>
+            </Text>
+          </View>
+        </View>
         {user?.isAdmin && (
-          <div className="flex items-center space-x-3">
-            <Link
-              to={`/vehicles/${vehicle.id}/edit`}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+          <View style={styles.headerActions}>
+            <Button
+              onPress={() => navigation.navigate('EditVehicle', { id: vehicle.id })}
+              variant="primary"
+              style={styles.headerButton}
             >
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Vehicle
-            </Link>
-            <button
-              onClick={() => setShowDeleteModal(true)}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
+              <View style={styles.buttonContent}>
+                <MaterialIcons name="edit" size={16} color="white" />
+                <Text style={styles.buttonText}>Edit Vehicle</Text>
+              </View>
+            </Button>
+            <Button
+              onPress={() => setShowDeleteModal(true)}
+              variant="danger"
+              style={styles.headerButton}
             >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete Vehicle
-            </button>
-          </div>
+              <View style={styles.buttonContent}>
+                <MaterialIcons name="delete" size={16} color="white" />
+                <Text style={styles.buttonText}>Delete Vehicle</Text>
+              </View>
+            </Button>
+          </View>
         )}
-      </div>
+      </View>
 
       {/* Status and Key Metrics */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Settings className="h-6 w-6 text-gray-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Status</dt>
-                  <dd className="mt-1">
-                    <Badge 
-                      type={vehicle.status === 'active' ? 'green' : vehicle.status === 'maintenance' ? 'orange' : 'red'} 
-                      label={vehicle.status === 'active' ? 'Active' : vehicle.status === 'maintenance' ? 'Maintenance' : 'Idle'} 
-                    />
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
+      <View style={styles.metricsGrid}>
+        <Card style={styles.metricCard}>
+          <CardBody>
+            <View style={styles.metricContent}>
+              <View style={styles.metricIcon}>
+                <MaterialIcons name="settings" size={24} color="#6b7280" />
+              </View>
+              <View style={styles.metricInfo}>
+                <Text style={styles.metricLabel}>Status</Text>
+                <View style={styles.metricValue}>
+                  <Badge 
+                    type={vehicle.status === 'active' ? 'green' : vehicle.status === 'maintenance' ? 'orange' : 'red'} 
+                    label={vehicle.status === 'active' ? 'Active' : vehicle.status === 'maintenance' ? 'Maintenance' : 'Idle'} 
+                  />
+                </View>
+              </View>
+            </View>
+          </CardBody>
+        </Card>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Gauge className="h-6 w-6 text-blue-500" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Mileage</dt>
-                  <dd className="text-lg font-medium text-gray-900">
-                    {vehicle.mileage?.toLocaleString() || 'N/A'} miles
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
+        <Card style={styles.metricCard}>
+          <CardBody>
+            <View style={styles.metricContent}>
+              <View style={[styles.metricIcon, { backgroundColor: '#dbeafe' }]}>
+                <MaterialCommunityIcons name="speedometer" size={24} color="#2563eb" />
+              </View>
+              <View style={styles.metricInfo}>
+                <Text style={styles.metricLabel}>Mileage</Text>
+                <Text style={styles.metricValueText}>
+                  {vehicle.mileage?.toLocaleString() || 'N/A'} miles
+                </Text>
+              </View>
+            </View>
+          </CardBody>
+        </Card>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <DollarSign className="h-6 w-6 text-green-500" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Maintenance Cost</dt>
-                  <dd className="text-lg font-medium text-gray-900">
-                    ${vehicle.maintenanceCost?.toLocaleString() || '0'}
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
+        <Card style={styles.metricCard}>
+          <CardBody>
+            <View style={styles.metricContent}>
+              <View style={[styles.metricIcon, { backgroundColor: '#dcfce7' }]}>
+                <MaterialIcons name="attach-money" size={24} color="#10b981" />
+              </View>
+              <View style={styles.metricInfo}>
+                <Text style={styles.metricLabel}>Maintenance Cost</Text>
+                <Text style={styles.metricValueText}>
+                  ${vehicle.maintenanceCost?.toLocaleString() || '0'}
+                </Text>
+              </View>
+            </View>
+          </CardBody>
+        </Card>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <User className="h-6 w-6 text-purple-500" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Assigned Driver</dt>
-                  <dd className="text-sm font-medium text-gray-900">
-                    {vehicle?.assignedDriverName ? (
-                      <Link 
-                        to={`/drivers/${vehicle.assignedDriverId}`}
-                        className="text-blue-600 hover:text-blue-700"
-                      >
-                        {vehicle.assignedDriverName}
-                      </Link>
-                    ) : (
-                      'Unassigned'
-                    )}
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+        <Card style={styles.metricCard}>
+          <CardBody>
+            <View style={styles.metricContent}>
+              <View style={[styles.metricIcon, { backgroundColor: '#f3e8ff' }]}>
+                <MaterialCommunityIcons name="account" size={24} color="#8b5cf6" />
+              </View>
+              <View style={styles.metricInfo}>
+                <Text style={styles.metricLabel}>Assigned Driver</Text>
+                <Text style={styles.metricValueText}>
+                  {vehicle?.assignedDriverName || 'Unassigned'}
+                </Text>
+              </View>
+            </View>
+          </CardBody>
+        </Card>
+      </View>
 
       {/* Detailed Information */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <View style={styles.detailsGrid}>
         {/* Vehicle Information */}
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-              Vehicle Information
-            </h3>
-            <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Vehicle ID</dt>
-                <dd className="mt-1 text-sm text-gray-900 font-mono">{vehicle.id}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">VIN</dt>
-                <dd className="mt-1 text-sm text-gray-900 font-mono">{vehicle.vin || 'N/A'}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">License Plate</dt>
-                <dd className="mt-1 text-sm text-gray-900">{vehicle.licensePlate || 'N/A'}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Make</dt>
-                <dd className="mt-1 text-sm text-gray-900">{vehicle.make || 'N/A'}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Model</dt>
-                <dd className="mt-1 text-sm text-gray-900">{vehicle.model || 'N/A'}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Year</dt>
-                <dd className="mt-1 text-sm text-gray-900">{vehicle.year || 'N/A'}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Fuel Type</dt>
-                <dd className="mt-1 text-sm text-gray-900">{vehicle.fuelType || 'N/A'}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Created</dt>
-                <dd className="mt-1 text-sm text-gray-900">
+        <Card style={styles.detailCard}>
+          <CardBody>
+            <Text style={styles.sectionTitle}>Vehicle Information</Text>
+            <View style={styles.detailsList}>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Vehicle ID</Text>
+                <Text style={[styles.detailValue, styles.monoText]}>{vehicle.id}</Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>VIN</Text>
+                <Text style={[styles.detailValue, styles.monoText]}>{vehicle.vin || 'N/A'}</Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>License Plate</Text>
+                <Text style={styles.detailValue}>{vehicle.licensePlate || 'N/A'}</Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Make</Text>
+                <Text style={styles.detailValue}>{vehicle.make || 'N/A'}</Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Model</Text>
+                <Text style={styles.detailValue}>{vehicle.model || 'N/A'}</Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Year</Text>
+                <Text style={styles.detailValue}>{vehicle.year || 'N/A'}</Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Fuel Type</Text>
+                <Text style={styles.detailValue}>{vehicle.fuelType || 'N/A'}</Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Created</Text>
+                <Text style={styles.detailValue}>
                   {formatDate(vehicle.createdAt)}
-                </dd>
-              </div>
-            </dl>
-          </div>
-        </div>
+                </Text>
+              </View>
+            </View>
+          </CardBody>
+        </Card>
 
         {/* Maintenance Information */}
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-              <Calendar className="h-5 w-5 inline mr-2" />
-              Maintenance Information
-            </h3>
-            <dl className="space-y-4">
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Last Maintenance</dt>
-                <dd className="mt-1 text-sm text-gray-900">
+        <Card style={styles.detailCard}>
+          <CardBody>
+            <View style={styles.sectionHeader}>
+              <MaterialIcons name="event" size={20} color="#6b7280" />
+              <Text style={styles.sectionTitleWithIcon}>Maintenance Information</Text>
+            </View>
+            <View style={styles.detailsList}>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Last Maintenance</Text>
+                <Text style={styles.detailValue}>
                   {vehicle.lastMaintenance 
                     ? formatDate(vehicle.lastMaintenance)
                     : 'Never'
                   }
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Next Maintenance</dt>
-                <dd className="mt-1 text-sm text-gray-900">
+                </Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Next Maintenance</Text>
+                <Text style={styles.detailValue}>
                   {vehicle.nextMaintenance 
                     ? formatDate(vehicle.nextMaintenance)
                     : 'Not scheduled'
                   }
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Total Maintenance Cost</dt>
-                <dd className="mt-1 text-lg font-semibold text-gray-900">
+                </Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Total Maintenance Cost</Text>
+                <Text style={styles.detailValueLarge}>
                   ${vehicle.maintenanceCost?.toLocaleString() || '0'}
-                </dd>
-              </div>
+                </Text>
+              </View>
               
               {vehicle.nextMaintenance && (
-                <div className="mt-4">
+                <View style={styles.maintenanceAlert}>
                   {(() => {
                     const nextMaintenanceDate = new Date(vehicle.nextMaintenance);
                     const today = new Date();
@@ -340,122 +334,410 @@ export function VehicleDetailPage() {
                     
                     if (daysUntilMaintenance <= 0) {
                       return (
-                        <div className="bg-red-50 border border-red-200 rounded-md p-3">
-                          <p className="text-sm text-red-800">
+                        <View style={styles.overdueAlert}>
+                          <Text style={styles.overdueText}>
                             ⚠️ Maintenance is overdue!
-                          </p>
-                        </div>
+                          </Text>
+                        </View>
                       );
                     } else if (daysUntilMaintenance <= 30) {
                       return (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
-                          <p className="text-sm text-yellow-800">
+                        <View style={styles.upcomingAlert}>
+                          <Text style={styles.upcomingText}>
                             ⚡ Maintenance due in {daysUntilMaintenance} days
-                          </p>
-                        </div>
+                          </Text>
+                        </View>
                       );
                     } else {
                       return (
-                        <div className="bg-green-50 border border-green-200 rounded-md p-3">
-                          <p className="text-sm text-green-800">
+                        <View style={styles.goodAlert}>
+                          <Text style={styles.goodText}>
                             ✅ Next maintenance in {daysUntilMaintenance} days
-                          </p>
-                        </div>
+                          </Text>
+                        </View>
                       );
                     }
                   })()}
-                </div>
+                </View>
               )}
-            </dl>
-          </div>
-        </div>
-      </div>
+            </View>
+          </CardBody>
+        </Card>
+      </View>
 
       {/* Assigned Driver Details */}
       {vehicle?.assignedDriverName && vehicle?.assignedDriverId && (
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-              <User className="h-5 w-5 inline mr-2" />
-              Assigned Driver Details
-            </h3>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="bg-purple-100 p-3 rounded-full">
-                  <User className="h-6 w-6 text-purple-600" />
-                </div>
-                <div>
-                  <h4 className="text-lg font-medium text-gray-900">{vehicle.assignedDriverName}</h4>
-                  <p className="text-sm text-gray-500">{vehicle.assignedDriverEmail || 'No email'}</p>
-                  <p className="text-sm text-gray-500">Driver ID: {vehicle.assignedDriverId}</p>
-                </div>
-              </div>
-              <Link
-                to={`/drivers/${vehicle.assignedDriverId}`}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        <Card style={styles.driverCard}>
+          <CardBody>
+            <View style={styles.sectionHeader}>
+              <MaterialCommunityIcons name="account" size={20} color="#6b7280" />
+              <Text style={styles.sectionTitleWithIcon}>Assigned Driver Details</Text>
+            </View>
+            <View style={styles.driverContent}>
+              <View style={styles.driverInfo}>
+                <View style={styles.driverAvatar}>
+                  <MaterialCommunityIcons name="account" size={24} color="#8b5cf6" />
+                </View>
+                <View style={styles.driverDetails}>
+                  <Text style={styles.driverName}>{vehicle.assignedDriverName}</Text>
+                  <Text style={styles.driverEmail}>{vehicle.assignedDriverEmail || 'No email'}</Text>
+                  <Text style={styles.driverId}>Driver ID: {vehicle.assignedDriverId}</Text>
+                </View>
+              </View>
+              <Button
+                onPress={() => navigation.navigate('DriverDetail', { id: vehicle.assignedDriverId })}
+                variant="secondary"
               >
                 View Driver Details
-              </Link>
-            </div>
-          </div>
-        </div>
+              </Button>
+            </View>
+          </CardBody>
+        </Card>
       )}
 
       {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
-          <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="p-6">
-              <div className="flex items-center mb-4">
-                <div className="flex-shrink-0">
-                  <AlertTriangle className="h-6 w-6 text-red-600" />
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-lg font-medium text-gray-900">Delete Vehicle</h3>
-                </div>
-              </div>
-              
-              <div className="mb-6">
-                <p className="text-sm text-gray-600 mb-4">
-                  <strong>Warning:</strong> This action cannot be undone. Are you sure you want to permanently delete this vehicle?
-                </p>
-                <div className="bg-gray-50 rounded-md p-3">
-                  <p className="text-sm font-medium text-gray-900">{vehicle.name}</p>
-                  <p className="text-sm text-gray-500">{vehicle.make} {vehicle.model} {vehicle.year}</p>
-                  <p className="text-sm text-gray-500">License: {vehicle.licensePlate}</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-end space-x-3">
-                <Button
-                  onClick={() => setShowDeleteModal(false)}
-                  disabled={isDeleting}
-                  variant="secondary"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  variant="danger"
-                >
-                  {isDeleting ? (
-                    <>
-                      <LoadingSpinner size="sm" className="text-white mr-2" />
-                      Deleting...
-                    </>
-                  ) : (
-                    <>
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Confirm Delete
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        headerContent={
+          <View style={styles.deleteModalHeader}>
+            <MaterialIcons name="warning" size={24} color="#ef4444" />
+            <Text style={styles.deleteModalTitle}>Delete Vehicle</Text>
+          </View>
+        }
+        footerContent={
+          <View style={styles.deleteModalFooter}>
+            <Button
+              onPress={() => setShowDeleteModal(false)}
+              disabled={isDeleting}
+              variant="secondary"
+              style={styles.modalFooterButton}
+            >
+              Cancel
+            </Button>
+            <Button
+              onPress={handleDelete}
+              disabled={isDeleting}
+              variant="danger"
+              style={styles.modalFooterButton}
+            >
+              {isDeleting ? (
+                <View style={styles.buttonContent}>
+                  <LoadingSpinner size="sm" color="white" />
+                  <Text style={styles.deletingText}>Deleting...</Text>
+                </View>
+              ) : (
+                <View style={styles.buttonContent}>
+                  <MaterialIcons name="delete" size={16} color="white" />
+                  <Text style={styles.deleteButtonText}>Confirm Delete</Text>
+                </View>
+              )}
+            </Button>
+          </View>
+        }
+      >
+        <View style={styles.deleteModalContent}>
+          <Text style={styles.deleteWarningText}>
+            <Text style={styles.deleteWarningBold}>Warning:</Text> This action cannot be undone. Are you sure you want to permanently delete this vehicle?
+          </Text>
+          <View style={styles.vehiclePreview}>
+            <Text style={styles.vehiclePreviewName}>{vehicle.name}</Text>
+            <Text style={styles.vehiclePreviewDetails}>{vehicle.make} {vehicle.model} {vehicle.year}</Text>
+            <Text style={styles.vehiclePreviewLicense}>License: {vehicle.licensePlate}</Text>
+          </View>
+        </View>
+      </Modal>
+    </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  scrollContent: {
+    padding: 24,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#ef4444',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 24,
+  },
+  headerLeft: {
+    flex: 1,
+    gap: 16,
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+  },
+  backButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButtonText: {
+    color: '#6b7280',
+    marginLeft: 4,
+    fontSize: 14,
+  },
+  headerInfo: {
+    gap: 4,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  headerActions: {
+    gap: 12,
+    marginLeft: 16,
+  },
+  headerButton: {
+    minWidth: 120,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    marginLeft: 8,
+  },
+  metricsGrid: {
+    gap: 16,
+    marginBottom: 24,
+  },
+  metricCard: {
+    marginBottom: 0,
+  },
+  metricContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  metricIcon: {
+    width: 48,
+    height: 48,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 20,
+  },
+  metricInfo: {
+    flex: 1,
+  },
+  metricLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6b7280',
+    marginBottom: 4,
+  },
+  metricValue: {
+    gap: 4,
+  },
+  metricValueText: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  detailsGrid: {
+    gap: 24,
+    marginBottom: 24,
+  },
+  detailCard: {
+    marginBottom: 0,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+    marginBottom: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionTitleWithIcon: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+    marginLeft: 8,
+  },
+  detailsList: {
+    gap: 16,
+  },
+  detailItem: {
+    gap: 4,
+  },
+  detailLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  detailValue: {
+    fontSize: 14,
+    color: '#111827',
+  },
+  detailValueLarge: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  monoText: {
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  maintenanceAlert: {
+    marginTop: 16,
+  },
+  overdueAlert: {
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    borderRadius: 6,
+    padding: 12,
+  },
+  overdueText: {
+    fontSize: 14,
+    color: '#991b1b',
+  },
+  upcomingAlert: {
+    backgroundColor: '#fffbeb',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    borderRadius: 6,
+    padding: 12,
+  },
+  upcomingText: {
+    fontSize: 14,
+    color: '#92400e',
+  },
+  goodAlert: {
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+    borderRadius: 6,
+    padding: 12,
+  },
+  goodText: {
+    fontSize: 14,
+    color: '#166534',
+  },
+  driverCard: {
+    marginBottom: 24,
+  },
+  driverContent: {
+    gap: 16,
+  },
+  driverInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  driverAvatar: {
+    width: 48,
+    height: 48,
+    backgroundColor: '#f3e8ff',
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  driverDetails: {
+    flex: 1,
+  },
+  driverName: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  driverEmail: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 2,
+  },
+  driverId: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  deleteModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  deleteModalTitle: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+    marginLeft: 12,
+  },
+  deleteModalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  modalFooterButton: {
+    flex: 1,
+  },
+  deleteModalContent: {
+    gap: 16,
+  },
+  deleteWarningText: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  deleteWarningBold: {
+    fontWeight: 'bold',
+  },
+  vehiclePreview: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 6,
+    padding: 12,
+  },
+  vehiclePreviewName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  vehiclePreviewDetails: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  vehiclePreviewLicense: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  deletingText: {
+    color: 'white',
+    marginLeft: 8,
+  },
+  deleteButtonText: {
+    color: 'white',
+    marginLeft: 8,
+  },
+});
